@@ -2,12 +2,12 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <title>Nefi Solitaire - Teljes Motor</title>
+    <title>Nefi Solitaire - Játszható Motor</title>
     <style>
         body { background: #0b3d0b; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
         #top-area { display: flex; gap: 20px; margin-bottom: 30px; }
         #table { display: flex; gap: 10px; }
-        .pile { width: 70px; height: 100px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 5px; display: flex; justify-content: center; align-items: center; cursor: pointer; }
+        .pile { width: 70px; height: 100px; border: 2px dashed rgba(255,255,255,0.3); border-radius: 5px; display: flex; justify-content: center; align-items: center; cursor: pointer; }
         .column { width: 80px; min-height: 400px; position: relative; }
         .card { 
             width: 70px; height: 100px; background: white; color: black; border-radius: 5px;
@@ -37,18 +37,18 @@
 
         function initGame() {
             fullDeck = [];
-            suits.forEach(s => values.forEach(v => fullDeck.push({s, v})));
+            suits.forEach(s => values.forEach(v => fullDeck.push({s, v, faceUp: false})));
             fullDeck.sort(() => Math.random() - 0.5);
             
             const table = document.getElementById('table');
             table.innerHTML = '';
             
-            // Oszlopok kiosztása
             for (let i = 0; i < 7; i++) {
                 const col = document.createElement('div');
                 col.className = 'column';
                 for (let j = 0; j <= i; j++) {
                     const card = fullDeck.pop();
+                    card.faceUp = (j === i); // Csak a legfelső legyen felfordítva
                     createCardElement(card, col, j);
                 }
                 table.appendChild(col);
@@ -59,7 +59,8 @@
             const el = document.createElement('div');
             el.className = 'card' + (['♥', '♦'].includes(card.s) ? ' red' : '');
             el.style.top = (index * 25) + 'px';
-            el.innerHTML = card.v + card.s;
+            el.innerHTML = card.faceUp ? card.v + card.s : "🂠"; // Hátlap vagy érték
+            el.draggable = card.faceUp;
             parent.appendChild(el);
         }
 
@@ -69,8 +70,6 @@
                 const waste = document.getElementById('waste');
                 waste.innerHTML = card.v + card.s;
                 waste.className = 'pile' + (['♥', '♦'].includes(card.s) ? ' red' : '');
-            } else {
-                alert("Elfogyott a pakli!");
             }
         }
         initGame();
