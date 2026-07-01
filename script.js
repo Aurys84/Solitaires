@@ -2,6 +2,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const undoBtn = document.getElementById('undo-btn');
     const newGameBtn = document.getElementById('new-game-btn');
+    const table = document.getElementById('table');
 
     // Kártyák keverése - Fisher-Yates algoritmus
     function shuffleDeck() {
@@ -22,16 +23,31 @@ document.addEventListener('DOMContentLoaded', () => {
         return deck;
     }
 
+    // Kártyák kirajzolása a táblára
+    function renderDeck(deck) {
+        table.innerHTML = ''; // Először tisztítjuk a területet
+        
+        deck.forEach(card => {
+            const cardDiv = document.createElement('div');
+            cardDiv.className = 'card';
+            // Itt adunk színt a kártyáknak: ♥ és ♦ piros, a többi alapértelmezett
+            if (card.suit === '♥' || card.suit === '♦') {
+                cardDiv.style.color = '#ff0000';
+            }
+            cardDiv.innerHTML = `${card.value}<br>${card.suit}`;
+            table.appendChild(cardDiv);
+        });
+    }
+
     // Új játék leosztása
     newGameBtn.addEventListener('click', () => {
         const deck = shuffleDeck();
-        console.log("Új leosztás kész:", deck);
-        // Ide jön majd a kártyák kirajzolása a képernyőre
+        renderDeck(deck);
+        console.log("Új leosztás kész és kirajzolva.");
     });
 
     // Lépés visszavonása
     undoBtn.addEventListener('click', () => {
         console.log("Utolsó lépés visszavonva.");
-        // Ide jön majd a lépéstörténet-kezelő
     });
 });
