@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return deck;
     }
 
-    // Kártyák kirajzolása 7 oszlopba (Tableau) - Z-index rétegzéssel
+    // Kártyák kirajzolása 7 oszlopba (Tableau)
     function renderDeck(deck) {
         table.innerHTML = '';
         
@@ -37,8 +37,6 @@ document.addEventListener('DOMContentLoaded', () => {
             col.forEach((card, cardIndex) => {
                 const cardDiv = document.createElement('div');
                 cardDiv.className = 'card';
-                
-                // Rétegzés a CSS-beli negatív marginhoz
                 cardDiv.style.zIndex = cardIndex;
                 
                 if (card.suit === '♥' || card.suit === '♦') {
