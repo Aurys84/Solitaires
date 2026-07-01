@@ -30,7 +30,7 @@
         <button onclick="init()">ÚJ LEOSZTÁS</button>
         <button onclick="undo()">VISSZA</button>
     </div>
-<script>
+    <script>
         let deck = [];
         let history = []; 
         const suits = ['♠', '♥', '♣', '♦'], vals = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
@@ -78,12 +78,9 @@
             return el;
         }
 
-     
-    function draw() {
+        function draw() {
             if(deck.length > 0) {
                 const c = deck.pop();
-                
-                // LÉPÉS 2: Elmentjük a kártyát a memóriába
                 history.push(c); 
                 
                 const waste = document.getElementById('waste');
@@ -91,7 +88,6 @@
                 
                 const cardEl = document.createElement('div');
                 cardEl.id = c.id;
-                // KIJAVÍTVA: Mindig megkapja a 'card' osztályt az alap fehér háttérhez!
                 cardEl.className = 'card' + (['♥', '♦'].includes(c.s) ? ' red' : '');
                 cardEl.style.position = 'relative';
                 cardEl.style.top = '0px';
@@ -103,19 +99,16 @@
             }
         }
         
-     // LÉPÉS 3: A VISSZA funkció tökéletesítése
         function undo() {
             if (history.length > 0) {
-                // Kivesszük az utolsó lapot a memóriából
                 const lastCard = history.pop();
-                
-                // KIJAVÍTVA: A tömb elejére szúrjuk be, hogy a pop() ne ugyanazt húzza ki azonnal!
+                // Visszatesszük a pakliba úgy, hogy a következő draw() újra megkaphassa
                 deck.push(lastCard);
                 
                 const waste = document.getElementById('waste');
-                waste.innerHTML = ''; // Teljesen kiürítjük a kijelzőt
+                waste.innerHTML = ''; 
                 
-                // Ha maradt még korábbi lap a memóriában, azt tesszük ki
+                // Ha maradt még kártya a históriában, kirajzoljuk az előzőt
                 if (history.length > 0) {
                     const prevCard = history[history.length - 1];
                     const cardEl = document.createElement('div');
@@ -128,11 +121,11 @@
                     cardEl.ondragstart = e => e.dataTransfer.setData("text", cardEl.id);
                     waste.appendChild(cardEl);
                 }
-         } else {
-                console.log("Nincs több visszavonható húzás a pakliban.");
+            } else {
+                console.log("Nincs több visszavonható húzás.");
             }
         }
-        
+    
         init();
     </script>
 </body>
