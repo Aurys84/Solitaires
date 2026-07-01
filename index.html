@@ -32,13 +32,12 @@
     </div>
 <script>
         let deck = [];
-        // LÉPÉS 1: Létrehozunk egy memóriát a lépéseknek
         let history = []; 
         const suits = ['♠', '♥', '♣', '♦'], vals = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 
         function init() {
             deck = [];
-            history = []; // Új osztásnál a memória is ürül
+            history = []; 
             suits.forEach(s => vals.forEach(v => deck.push({s, v, id: Math.random().toString(36).substr(2, 9)})));
             deck.sort(() => Math.random() - 0.5);
             const table = document.getElementById('table');
@@ -82,8 +81,6 @@
         function draw() {
             if(deck.length > 0) {
                 const c = deck.pop();
-                
-                // LÉPÉS 2: Elmentjük a kártyát a memóriába, mielőtt megmutatjuk
                 history.push(c); 
                 
                 const waste = document.getElementById('waste');
@@ -102,19 +99,14 @@
             }
         }
         
-        // LÉPÉS 3: A VISSZA funkció megvalósítása a húzásra
         function undo() {
             if (history.length > 0) {
-                // Kiveszzük az utolsó húzott lapot a történelemből
                 const lastCard = history.pop();
-                
-                // Visszatesszük a pakli tetejére
                 deck.push(lastCard);
                 
                 const waste = document.getElementById('waste');
-                waste.innerHTML = ''; // Kiürítjük a dobópaklit
+                waste.innerHTML = ''; 
                 
-                // Ha maradt még korábbi lap a históriában, azt visszarajzoljuk a dobópaklira
                 if (history.length > 0) {
                     const prevCard = history[history.length - 1];
                     const cardEl = document.createElement('div');
