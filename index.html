@@ -205,38 +205,41 @@
         }
     }
 
-    function draw() {
-        if(deck.length > 0) {
+   function draw() {
+        if (deck.length > 0) {
             const c = deck.pop();
             history.push({
                 type: 'draw',
                 card: c
             }); 
             updateWasteUI();
+        } 
+        // ÚJ: Ha üres a pakli, de van mit újraforgatni a dobópakliból
+        else {
+            const draws = history.filter(h => h.type === 'draw');
+            if (draws.length > 0) {
+                // Összegyűjtjük a dobópakliban lévő kártyákat
+                const recycledCards = draws.map(h => h.card);
+                
+                // Mivel a draw() pop()-olt, a dobópakli teteje a tömb vége. 
+                // Fordított sorrendben tesszük vissza a pakliba, hogy ugyanaz legyen a sorrend
+                deck = recycledCards.reverse();
+                
+                // Kitisztítjuk a húzásokat a history-ból, de elmentjük magát az újraforgatást
+                history = history.filter(h => h.type !== 'draw');
+                history.push({
+                    type: 'recycle',
+                    cards: recycledCards // Elmentjük, miket forgattunk vissza, hogy az undo() vissza tudja csinálni!
+                });
+                
+                updateWasteUI();
+                console.log("A dobópakli sikeresen visszaforgatva a húzópakliba!");
+            } else {
+                alert("A teljes pakli elfogyott, nincs mit újraforgatni!");
+            }
         }
     }
 
-    function updateWasteUI() {
-        const waste = document.getElementById('waste');
-        waste.innerHTML = '';
-        const draws = history.filter(h => h.type === 'draw');
-        if (draws.length > 0) {
-            const c = draws[draws.length - 1].card;
-            const cardEl = document.createElement('div');
-            cardEl.id = c.id;
-            // KIJAVÍTVA: A húzott lapnál is szabványos attribútumokat mentünk el!
-            cardEl.setAttribute('data-suit', c.s);
-            cardEl.setAttribute('data-val', c.v);
-            cardEl.className = 'card' + (['♥', '♦'].includes(c.s) ? ' red' : '');
-            cardEl.style.position = 'relative';
-            cardEl.style.top = '0px';
-            cardEl.innerHTML = `${c.v}<br>${c.s}`;
-            cardEl.draggable = true;
-            cardEl.ondragstart = e => e.dataTransfer.setData("text", cardEl.id);
-            waste.appendChild(cardEl);
-        }
-    }
-    
     function undo() {
         if (history.length > 0) {
             const lastAction = history.pop();
@@ -245,6 +248,19 @@
                 deck.push(lastAction.card);
                 updateWasteUI();
             } 
+            // ÚJ: Felkészítjük az undo-t az újraforgatás visszacsinálására is!
+            else if (lastAction.type === 'recycle') {
+                // Visszaszedjük a kártyákat a pakliból
+                deck = [];
+                // A history-ba újra bepakoljuk a draw eseményeket
+                lastAction.cards.reverse().forEach(c => {
+                    history.push({
+                        type: 'draw',
+                        card: c
+                    });
+                });
+                updateWasteUI();
+            }
             else if (lastAction.type === 'move') {
                 const cardEl = document.getElementById(lastAction.cardId);
                 const fromEl = document.getElementById(lastAction.from);
