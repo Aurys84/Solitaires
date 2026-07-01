@@ -231,7 +231,7 @@
         }
     }
     
-    function undo() {
+   function undo() {
         if (history.length > 0) {
             const lastAction = history.pop();
             
@@ -249,12 +249,22 @@
 
                 if (fromEl) {
                     fromEl.appendChild(cardEl);
+                    
+                    // KIJAVÍTVA: Felkészítjük a felületet a különböző visszapakolási helyekre
                     if (lastAction.from === 'waste') {
                         cardEl.style.position = 'relative';
                         cardEl.style.top = '0px';
+                        cardEl.style.left = '0px';
+                    } else if (lastAction.from.startsWith('fnd-')) {
+                        // Ha gyűjtőbe megy vissza, teljesen egymásra lapoljuk őket
+                        cardEl.style.position = 'absolute';
+                        cardEl.style.top = '0px';
+                        cardEl.style.left = '0px';
                     } else {
+                        // Ha sima oszlopba megy vissza (tábla)
                         cardEl.style.position = 'absolute';
                         cardEl.style.top = ((fromEl.children.length - 1) * 25) + 'px';
+                        cardEl.style.left = '0px';
                     }
                 }
             }
