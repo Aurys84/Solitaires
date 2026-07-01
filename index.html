@@ -7,7 +7,7 @@
         body { background: #0b3d0b; color: white; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; align-items: center; }
         #top { display: flex; gap: 15px; margin-top: 20px; }
         #table { display: flex; gap: 10px; margin-top: 20px; }
-        .slot { width: 70px; height: 100px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 5px; display: flex; align-items: center; justify-content: center; }
+        .slot { width: 70px; height: 100px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 5px; display: flex; align-items: center; justify-content: center; position: relative; }
         .column { width: 80px; position: relative; min-height: 400px; }
         .card { 
             width: 70px; height: 100px; background: white; color: black; border-radius: 5px;
@@ -23,7 +23,10 @@
     <div id="top">
         <div class="slot" id="stock" onclick="draw()">PAKLI</div>
         <div class="slot" id="waste"></div>
-        <div class="slot"></div><div class="slot"></div><div class="slot"></div><div class="slot"></div>
+        <div class="slot" id="fnd-0" ondragover="e=>e.preventDefault()" ondrop="handleFoundationDrop(e, this)"></div>
+        <div class="slot" id="fnd-1" ondragover="e=>e.preventDefault()" ondrop="handleFoundationDrop(e, this)"></div>
+        <div class="slot" id="fnd-2" ondragover="e=>e.preventDefault()" ondrop="handleFoundationDrop(e, this)"></div>
+        <div class="slot" id="fnd-3" ondragover="e=>e.preventDefault()" ondrop="handleFoundationDrop(e, this)"></div>
     </div>
     <div id="table"></div>
     <div style="margin-top:20px;">
@@ -54,7 +57,6 @@
                 const fromId = cardEl.parentElement.id;
                 const fromEl = cardEl.parentElement;
                 
-                // Megnézzük, hogy az elhúzott lap alatt volt-e egy lezárt lap, ami most fel fog fordulni
                 let revealedCardId = null;
                 if (fromEl && fromEl.className === 'column' && fromEl.children.length > 1) {
                     const subTop = fromEl.children[fromInColumnIndex(fromEl, cardEl) - 1];
@@ -68,7 +70,7 @@
                     cardId: id,
                     from: fromId,
                     to: col.id,
-                    wasRevealed: revealedCardId // Elmentjük a memóriába, ha történt felfordulás
+                    wasRevealed: revealedCardId
                 });
 
                 col.appendChild(cardEl);
@@ -76,7 +78,6 @@
                 cardEl.style.top = ((col.children.length - 1) * 25) + 'px';
                 cardEl.style.left = '0px';
 
-                // Ha onnan vettük el, ellenőrizzük és felfordítjuk az ott maradt legfelsőt
                 if (fromId.startsWith('col-')) {
                     revealTopCard(fromEl);
                 }
@@ -90,14 +91,75 @@
             table.appendChild(col);
         }
         document.getElementById('waste').innerHTML = '';
+        // Tisztítsuk ki a gyűjtőket is új játék indításakor
+        for(let i=0; i<4; i++) document.getElementById('fnd-'+i).innerHTML = '';
     }
 
-    // Segédfunkció, ami megmondja egy kártya indexét az oszlopon belül
     function fromInColumnIndex(col, card) {
         return Array.from(col.children).indexOf(card);
     }
 
-    // ÚJ: Ez a funkció felelős az oszlop legfelső lapjának felfordításáért
+    // ÚJ: Szabálykezelő a felső négy gyűjtőhöz
+    function handleFoundationDrop(e, slot) {
+        const id = e.dataTransfer.getData("text");
+        const cardEl = document.getElementById(id);
+        const fromEl = cardEl.parentElement;
+        const fromId = fromEl.id;
+
+        const cardSuit = cardEl.dataset.suit;
+        const cardVal = cardEl.dataset.val;
+        const cardRank = vals.indexOf(cardVal);
+
+        let canMove = false;
+
+        // Ha a gyűjtő üres, csak Ászt (Rank 0) engedünk rátenni
+        if (slot.children.length === 0) {
+            if (cardRank === 0) {
+                canMove = true;
+            }
+        } else {
+            // Ha már van benne lap, megnézzük a legfelsőt
+            const topCard = slot.lastChild;
+            const topSuit = topCard.dataset.suit;
+            const topRank = vals.indexOf(topCard.dataset.val);
+
+            // Csak azonos jel és pontosan eggyel nagyobb érték jöhet számításba
+            if (cardSuit === topSuit && cardRank === topRank + 1) {
+                canMove = true;
+            }
+        }
+
+        if (canMove) {
+            let revealedCardId = null;
+            if (fromEl && fromEl.className === 'column' && fromEl.children.length > 1) {
+                const subTop = fromEl.children[fromInColumnIndex(fromEl, cardEl) - 1];
+                if (subTop && subTop.classList.contains('back')) {
+                    revealedCardId = subTop.id;
+                }
+            }
+
+            history.push({
+                type: 'move',
+                cardId: id,
+                from: fromId,
+                to: slot.id,
+                wasRevealed: revealedCardId
+            });
+
+            slot.appendChild(cardEl);
+            // Mivel a gyűjtőben egymáson fekszenek, középre rendezzük őket teljesen takarásba
+            cardEl.style.position = 'absolute';
+            cardEl.style.top = '0px';
+            cardEl.style.left = '0px';
+
+            if (fromId.startsWith('col-')) {
+                revealTopCard(fromEl);
+            }
+        } else {
+            console.log("Szabálytalan lépés a gyűjtőbe!");
+        }
+    }
+
     function revealTopCard(colEl) {
         if (colEl && colEl.children.length > 0) {
             const topCard = colEl.lastChild;
@@ -116,7 +178,6 @@
         }
     }
 
-    // ÚJ: Ez a funkció visszazárja a lapot, ha az undo() miatt visszapakolunk rá egyet
     function hideCard(cardEl) {
         if (cardEl) {
             cardEl.classList.add('back');
@@ -182,7 +243,6 @@
                 const cardEl = document.getElementById(lastAction.cardId);
                 const fromEl = document.getElementById(lastAction.from);
                 
-                // Ha ez a lépés fordított fel lapot, akkor visszalépésnél azt vissza kell zárni!
                 if (lastAction.wasRevealed) {
                     hideCard(document.getElementById(lastAction.wasRevealed));
                 }
