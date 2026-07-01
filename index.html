@@ -206,6 +206,7 @@
     }
 
    function draw() {
+        // Ha van lap a pakliban, SImán húzunk egyet (ez javítja ki a beragadást!)
         if (deck.length > 0) {
             const c = deck.pop();
             history.push({
@@ -214,26 +215,25 @@
             }); 
             updateWasteUI();
         } 
-        // ÚJ: Ha üres a pakli, de van mit újraforgatni a dobópakliból
+        // Ha teljesen elfogyott a pakli, AKKOR nézzük meg az újraforgatást
         else {
             const draws = history.filter(h => h.type === 'draw');
             if (draws.length > 0) {
-                // Összegyűjtjük a dobópakliban lévő kártyákat
+                // Kivesszük a kártyákat a history-ból
                 const recycledCards = draws.map(h => h.card);
                 
-                // Mivel a draw() pop()-olt, a dobópakli teteje a tömb vége. 
-                // Fordított sorrendben tesszük vissza a pakliba, hogy ugyanaz legyen a sorrend
+                // Visszatöltjük a pakliba fordított sorrendben
                 deck = recycledCards.reverse();
                 
-                // Kitisztítjuk a húzásokat a history-ból, de elmentjük magát az újraforgatást
+                // Kitöröljük a régi draw-kat, és elmentjük az újraforgatást az undo-nak
                 history = history.filter(h => h.type !== 'draw');
                 history.push({
                     type: 'recycle',
-                    cards: recycledCards // Elmentjük, miket forgattunk vissza, hogy az undo() vissza tudja csinálni!
+                    cards: recycledCards
                 });
                 
                 updateWasteUI();
-                console.log("A dobópakli sikeresen visszaforgatva a húzópakliba!");
+                console.log("Pakli újraforgatva!");
             } else {
                 alert("A teljes pakli elfogyott, nincs mit újraforgatni!");
             }
@@ -248,12 +248,11 @@
                 deck.push(lastAction.card);
                 updateWasteUI();
             } 
-            // ÚJ: Felkészítjük az undo-t az újraforgatás visszacsinálására is!
             else if (lastAction.type === 'recycle') {
-                // Visszaszedjük a kártyákat a pakliból
                 deck = [];
-                // A history-ba újra bepakoljuk a draw eseményeket
-                lastAction.cards.reverse().forEach(c => {
+                // Visszaállítjuk a húzásokat a dobópakliba
+                const originalCards = [...lastAction.cards].reverse();
+                originalCards.forEach(c => {
                     history.push({
                         type: 'draw',
                         card: c
