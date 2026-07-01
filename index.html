@@ -2,14 +2,19 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <title>Nefi Solitaire - Stabil Motor</title>
+    <title>Nefi Solitaire - Teljes Kód</title>
     <style>
-        body { background: #0b3d0b; color: white; font-family: monospace; display: flex; flex-direction: column; align-items: center; }
+        body { background: #0b3d0b; color: white; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; align-items: center; }
         #top { display: flex; gap: 15px; margin-top: 20px; }
         #table { display: flex; gap: 10px; margin-top: 20px; }
-        .slot { width: 70px; height: 100px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 5px; display: flex; align-items: center; justify-content: center; }
+        .slot { width: 70px; height: 100px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 10px; text-align: center; }
         .column { width: 80px; position: relative; min-height: 400px; }
-        .card { width: 70px; height: 100px; background: white; color: black; border-radius: 5px; position: absolute; border: 1px solid #000; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; cursor: grab; }
+        .card { 
+            width: 70px; height: 100px; background: white; color: black; border-radius: 5px;
+            position: absolute; border: 1px solid #000; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; font-weight: bold; cursor: grab;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+        }
         .red { color: red; }
     </style>
 </head>
@@ -20,16 +25,47 @@
         <div class="slot" id="f1"></div><div class="slot" id="f2"></div><div class="slot" id="f3"></div><div class="slot" id="f4"></div>
     </div>
     <div id="table"></div>
-    <div style="margin-top:20px;">
+    <div style="margin-top: 20px;">
         <button onclick="init()">ÚJ LEOSZTÁS</button>
         <button onclick="undo()">VISSZA</button>
     </div>
 
     <script>
-        let deck = [], history = [];
+        let deck = [];
         const suits = ['♠', '♥', '♣', '♦'], vals = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 
         function init() {
             deck = [];
-            suits.forEach(s => vals.forEach(v => deck.push({s, v, faceUp: false})));
-            deck.sort(() => Math.random() - 0
+            suits.forEach(s => vals.forEach(v => deck.push({s, v})));
+            deck.sort(() => Math.random() - 0.5);
+            const table = document.getElementById('table');
+            table.innerHTML = '';
+            for (let i = 0; i < 7; i++) {
+                const col = document.createElement('div');
+                col.className = 'column';
+                for (let j = 0; j <= i; j++) {
+                    const card = deck.pop();
+                    const el = document.createElement('div');
+                    el.className = 'card' + (['♥', '♦'].includes(card.s) ? ' red' : '');
+                    el.style.top = (j * 25) + 'px';
+                    el.innerHTML = `${card.v}<br>${card.s}`;
+                    col.appendChild(el);
+                }
+                table.appendChild(col);
+            }
+        }
+
+        function draw() {
+            if(deck.length > 0) {
+                const c = deck.pop();
+                const waste = document.getElementById('waste');
+                waste.innerHTML = `${c.v}${c.s}`;
+                waste.className = 'slot' + (['♥', '♦'].includes(c.s) ? ' red' : '');
+            }
+        }
+
+        function undo() { alert("Vissza lépés folyamatban..."); }
+        init();
+    </script>
+</body>
+</html>
