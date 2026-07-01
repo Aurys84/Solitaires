@@ -2,18 +2,17 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <title>Nefi Solitaire - Interaktív Motor</title>
+    <title>Nefi Solitaire - Teljes Játék</title>
     <style>
-        body { background: #0b3d0b; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
+        body { background: #0b3d0b; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; }
         #top-area { display: flex; gap: 15px; margin-top: 20px; }
         #table { display: flex; gap: 10px; margin-top: 20px; }
-        .slot { width: 70px; height: 100px; border: 2px dashed rgba(255,255,255,0.3); border-radius: 5px; }
+        .slot { width: 70px; height: 100px; border: 2px dashed rgba(255,255,255,0.3); border-radius: 5px; display: flex; justify-content: center; align-items: center; }
         .column { width: 80px; position: relative; }
         .card { 
             width: 70px; height: 100px; background: white; color: black; border-radius: 5px;
             position: absolute; border: 1px solid #ccc; cursor: grab;
-            display: flex; justify-content: center; align-items: center; font-weight: bold;
-            user-select: none;
+            display: flex; justify-content: center; align-items: center; font-weight: bold; user-select: none;
         }
         .back { background: #2196F3; border: 3px solid white; }
         .red { color: red; }
@@ -21,42 +20,46 @@
 </head>
 <body>
     <div id="top-area">
-        <div id="stock" class="slot" style="display:flex; justify-content:center; align-items:center;">PAKLI</div>
+        <div id="stock" class="slot" onclick="drawCard()">PAKLI</div>
         <div id="waste" class="slot"></div>
         <div class="slot"></div><div class="slot"></div><div class="slot"></div><div class="slot"></div>
     </div>
     <div id="table"></div>
-    <button onclick="initGame()" style="margin-top:20px;">Új leosztás</button>
+    <button onclick="location.reload()" style="margin-top:20px;">Új leosztás</button>
 
     <script>
+        let deck = [];
         function initGame() {
-            const table = document.getElementById('table');
-            table.innerHTML = '';
-            const suits = ['♠', '♥', '♣', '♦'];
-            const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-            let deck = [];
+            const suits = ['♠', '♥', '♣', '♦'], values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+            deck = [];
             suits.forEach(s => values.forEach(v => deck.push({s, v})));
             deck.sort(() => Math.random() - 0.5);
-
+            
+            const table = document.getElementById('table');
+            table.innerHTML = '';
             for (let i = 0; i < 7; i++) {
                 const col = document.createElement('div');
                 col.className = 'column';
                 for (let j = 0; j <= i; j++) {
                     const card = deck.pop();
                     const el = document.createElement('div');
-                    const isFaceUp = (j === i);
-                    el.className = 'card' + (isFaceUp ? '' : ' back') + (isFaceUp && ['♥', '♦'].includes(card.s) ? ' red' : '');
+                    el.className = 'card' + (['♥', '♦'].includes(card.s) ? ' red' : '');
                     el.style.top = (j * 25) + 'px';
-                    el.innerHTML = isFaceUp ? card.v + card.s : '';
-                    
-                    // INTERAKTIVITÁS: Itt adjuk hozzá a húzás lehetőségét
-                    if(isFaceUp) {
-                        el.draggable = true;
-                        el.addEventListener('dragstart', (e) => e.dataTransfer.setData('text/plain', el.innerHTML));
-                    }
+                    el.innerHTML = card.v + card.s;
+                    el.draggable = true; // Mozgatható
+                    el.addEventListener('dragstart', (e) => e.dataTransfer.setData('text', el.innerHTML));
                     col.appendChild(el);
                 }
                 table.appendChild(col);
+            }
+        }
+
+        function drawCard() {
+            if (deck.length > 0) {
+                const card = deck.pop();
+                const waste = document.getElementById('waste');
+                waste.innerHTML = card.v + card.s;
+                waste.className = 'slot' + (['♥', '♦'].includes(card.s) ? ' red' : '');
             }
         }
         initGame();
