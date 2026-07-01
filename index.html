@@ -76,18 +76,34 @@
             }
             return el;
         }
-
-        function draw() {
+function draw() {
             if(deck.length > 0) {
                 const c = deck.pop();
                 const waste = document.getElementById('waste');
-                waste.innerHTML = `${c.v}<br>${c.s}`;
-                waste.className = 'slot' + (['♥', '♦'].includes(c.s) ? ' red' : '');
-                waste.id = c.id;
-                waste.draggable = true;
-                waste.ondragstart = e => e.dataTransfer.setData("text", waste.id);
+                
+                // Kiürítjük a dobópakli helyét, mielőtt új lapot teszünk bele
+                waste.innerHTML = '';
+                
+                // Létrehozunk egy valódi kártya objektumot/elemet a kereten BELÜL
+                const cardEl = document.createElement('div');
+                cardEl.id = c.id;
+                
+                // Megkapja a rendes kártya kinézetet (.card) és a piros színt, ha kell (.red)
+                cardEl.className = 'card' + (['♥', '♦'].includes(c.s) ? ' red' : '');
+                
+                // Mivel a .card pozíciója absolute, a waste sloton belül középre igazítjuk
+                cardEl.style.position = 'relative';
+                cardEl.style.top = '0px';
+                
+                cardEl.innerHTML = `${c.v}<br>${c.s}`;
+                cardEl.draggable = true;
+                cardEl.ondragstart = e => e.dataTransfer.setData("text", cardEl.id);
+                
+                // Beletesszük a kártyát a keretbe
+                waste.appendChild(cardEl);
             }
         }
+    
         init();
     </script>
   
