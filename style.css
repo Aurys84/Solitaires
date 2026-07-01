@@ -2,24 +2,35 @@
 body {
     margin: 0;
     padding: 0;
-    background-color: #0d0f0d; /* Labor-sötét */
-    color: #00ff41; /* Mátrix-zöld betűszín */
+    background-color: #0d0f0d; 
+    color: #00ff41; 
     font-family: 'Courier New', Courier, monospace;
     display: flex;
     flex-direction: column;
     align-items: center;
-    height: 100vh;
+    min-height: 100vh;
 }
 
 #game-container {
     width: 90%;
     max-width: 800px;
     margin-top: 20px;
-    border: 1px solid #333;
-    min-height: 400px;
 }
 
-/* Vezérlőgombok stílusa */
+#table {
+    display: flex;
+    justify-content: center;
+    gap: 15px; /* Oszlopok közötti távolság */
+    padding: 20px;
+}
+
+.tableau-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Vezérlőgombok */
 #controls {
     margin-top: 20px;
     display: flex;
@@ -39,18 +50,17 @@ button:hover {
     background-color: #00ff41;
     color: #000;
 }
+
+/* Kártya stílus - az igazi pasziánszos "átlapolás" */
 .card {
-    display: inline-block;
     width: 50px;
     height: 70px;
     border: 1px solid #00ff41;
-    margin: 5px;
-    text-align: center;
-    line-height: 70px;
     background-color: #1a1a1a;
-}
-#table {
-    display: flex;
-    flex-wrap: wrap;
-    padding: 10px;
+    text-align: center;
+    line-height: 20px; /* Szöveg igazítás */
+    padding-top: 10px;
+    margin-bottom: -50px; /* EZ A TRÜKK: ettől csúsznak egymásra */
+    position: relative;
+    cursor: grab;
 }
