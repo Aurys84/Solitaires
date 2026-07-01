@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return deck;
     }
 
-    // Kártyák kirajzolása 7 oszlopba (Tableau)
+    // Kártyák kirajzolása 7 oszlopba (Tableau) - Z-index rétegzéssel
     function renderDeck(deck) {
         table.innerHTML = '';
         
