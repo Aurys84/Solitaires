@@ -78,9 +78,12 @@
             return el;
         }
 
-        function draw() {
+     
+    function draw() {
             if(deck.length > 0) {
                 const c = deck.pop();
+                
+                // LÉPÉS 2: Elmentjük a kártyát a memóriába
                 history.push(c); 
                 
                 const waste = document.getElementById('waste');
@@ -88,6 +91,7 @@
                 
                 const cardEl = document.createElement('div');
                 cardEl.id = c.id;
+                // KIJAVÍTVA: Mindig megkapja a 'card' osztályt az alap fehér háttérhez!
                 cardEl.className = 'card' + (['♥', '♦'].includes(c.s) ? ' red' : '');
                 cardEl.style.position = 'relative';
                 cardEl.style.top = '0px';
@@ -99,18 +103,23 @@
             }
         }
         
+        // LÉPÉS 3: A VISSZA funkció tökéletesítése
         function undo() {
             if (history.length > 0) {
                 const lastCard = history.pop();
+                
+                // KIJAVÍTVA: push helyett visszaadjuk a végére, ahonnan a pop leszedte
                 deck.push(lastCard);
                 
                 const waste = document.getElementById('waste');
-                waste.innerHTML = ''; 
+                waste.innerHTML = ''; // Kiürítjük a dobópaklit
                 
+                // Ha maradt még korábbi lap, azt rendes .card dizájnnal rajzoljuk vissza
                 if (history.length > 0) {
                     const prevCard = history[history.length - 1];
                     const cardEl = document.createElement('div');
                     cardEl.id = prevCard.id;
+                    // KIJAVÍTVA: Itt is kötelező a 'card ' osztály, hogy ne legyen átlátszó!
                     cardEl.className = 'card' + (['♥', '♦'].includes(prevCard.s) ? ' red' : '');
                     cardEl.style.position = 'relative';
                     cardEl.style.top = '0px';
@@ -121,7 +130,6 @@
                 }
             }
         }
-    
         init();
     </script>
 </body>
