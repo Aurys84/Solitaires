@@ -4,61 +4,55 @@
     <meta charset="UTF-8">
     <title>Nefi Solitaire - Játék Motor</title>
     <style>
-        body { background: #0b3d0b; color: white; font-family: 'Arial', sans-serif; display: flex; flex-direction: column; align-items: center; height: 100vh; margin: 0; }
+        body { background: #0b3d0b; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
         #top-area { display: flex; gap: 15px; margin-top: 20px; }
         #table { display: flex; gap: 10px; margin-top: 20px; }
-        
-        /* Keretek stílusa */
-        .slot { width: 70px; height: 100px; border: 2px dashed rgba(255,255,255,0.3); border-radius: 5px; display: flex; justify-content: center; align-items: center; position: relative; }
+        .slot { width: 70px; height: 100px; border: 2px dashed rgba(255,255,255,0.3); border-radius: 5px; }
         .column { width: 80px; position: relative; }
-        
-        /* Kártya stílusa */
-        .card { width: 70px; height: 100px; background: white; color: black; border-radius: 5px; position: absolute; border: 1px solid #999; display: flex; flex-direction: column; justify-content: center; align-items: center; font-weight: bold; cursor: grab; box-shadow: 2px 2px 5px rgba(0,0,0,0.3); }
-        .back { background: #2196F3; border: 3px solid white; } /* Kártya hátlapja */
+        .card { 
+            width: 70px; height: 100px; background: white; color: black; border-radius: 5px;
+            position: absolute; border: 1px solid #ccc; cursor: grab;
+            display: flex; justify-content: center; align-items: center; font-weight: bold;
+        }
+        .back { background: #2196F3; } /* Kék hátlap */
         .red { color: red; }
     </style>
 </head>
 <body>
     <div id="top-area">
-        <div id="stock" class="slot" onclick="drawCard()">PAKLI</div>
-        <div id="waste" class="slot"></div>
+        <div class="slot">PAKLI</div>
+        <div class="slot"></div>
         <div class="slot"></div><div class="slot"></div><div class="slot"></div><div class="slot"></div>
     </div>
     <div id="table"></div>
     <button onclick="initGame()" style="margin-top:20px;">Új leosztás</button>
 
     <script>
-        // Játék állapota
-        let deck = [];
-        const suits = ['♠', '♥', '♣', '♦'];
-        const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-
         function initGame() {
-            deck = [];
-            suits.forEach(s => values.forEach(v => deck.push({s, v, faceUp: false})));
-            deck.sort(() => Math.random() - 0.5);
-            render();
-        }
-
-        function render() {
             const table = document.getElementById('table');
             table.innerHTML = '';
+            const suits = ['♠', '♥', '♣', '♦'];
+            const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+            let deck = [];
+            suits.forEach(s => values.forEach(v => deck.push({s, v})));
+            deck.sort(() => Math.random() - 0.5);
+
             for (let i = 0; i < 7; i++) {
                 const col = document.createElement('div');
                 col.className = 'column';
                 for (let j = 0; j <= i; j++) {
                     const card = deck.pop();
-                    card.faceUp = (j === i); // Csak az utolsó lap van felfordítva
                     const el = document.createElement('div');
-                    el.className = 'card' + (card.faceUp ? '' : ' back') + (['♥', '♦'].includes(card.s) ? ' red' : '');
+                    // Ha nem a legalsó lap, akkor hátlapot kap
+                    const isFaceUp = (j === i);
+                    el.className = 'card' + (isFaceUp ? '' : ' back') + (isFaceUp && ['♥', '♦'].includes(card.s) ? ' red' : '');
                     el.style.top = (j * 25) + 'px';
-                    el.innerHTML = card.faceUp ? card.v + card.s : '';
+                    el.innerHTML = isFaceUp ? card.v + card.s : '';
                     col.appendChild(el);
                 }
                 table.appendChild(col);
             }
         }
-
         initGame();
     </script>
 </body>
