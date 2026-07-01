@@ -1,0 +1,2 @@
+# Solitaires
+Alap Silitaires-kártyajáték!
