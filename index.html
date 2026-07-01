@@ -20,13 +20,13 @@
     </style>
 </head>
 <body>
-    <div id="top">
+ <div id="top">
         <div class="slot" id="stock" onclick="draw()">PAKLI</div>
         <div class="slot" id="waste"></div>
-        <div class="slot" id="fnd-0" ondragover="e=>e.preventDefault()" ondrop="handleFoundationDrop(e, this)"></div>
-        <div class="slot" id="fnd-1" ondragover="e=>e.preventDefault()" ondrop="handleFoundationDrop(e, this)"></div>
-        <div class="slot" id="fnd-2" ondragover="e=>e.preventDefault()" ondrop="handleFoundationDrop(e, this)"></div>
-        <div class="slot" id="fnd-3" ondragover="e=>e.preventDefault()" ondrop="handleFoundationDrop(e, this)"></div>
+        <div class="slot" id="fnd-0" ondragover="event.preventDefault()" ondrop="handleFoundationDrop(event, this)"></div>
+        <div class="slot" id="fnd-1" ondragover="event.preventDefault()" ondrop="handleFoundationDrop(event, this)"></div>
+        <div class="slot" id="fnd-2" ondragover="event.preventDefault()" ondrop="handleFoundationDrop(event, this)"></div>
+        <div class="slot" id="fnd-3" ondragover="event.preventDefault()" ondrop="handleFoundationDrop(event, this)"></div>
     </div>
     <div id="table"></div>
     <div style="margin-top:20px;">
@@ -113,11 +113,11 @@
         return el;
     }
 
-    function handleFoundationDrop(e, slot) {
+  function handleFoundationDrop(e, slot) {
+        e.preventDefault(); // KIJAVÍTVA: Ez kötelező az esemény elejére, hogy a böngésző ne blokkoljon!
         const id = e.dataTransfer.getData("text");
         const cardEl = document.getElementById(id);
         if (!cardEl) return;
-
         const fromEl = cardEl.parentElement;
         const fromId = fromEl.id;
 
