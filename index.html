@@ -3,14 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nefi Solitaires</title>
+    <title>Nefi Solitaires - Mátrix Labor</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <div id="game-container">
-        <!-- Itt lesz a játékmező -->
-        <div id="deck"></div>
+        <div id="top-area">
+            <div id="stock-pile" class="pile"></div>
+            <div id="waste-pile" class="pile"></div>
+            <div id="foundations">
+                <div class="foundation" data-suit="♠"></div>
+                <div class="foundation" data-suit="♥"></div>
+                <div class="foundation" data-suit="♣"></div>
+                <div class="foundation" data-suit="♦"></div>
+            </div>
+        </div>
+
         <div id="table"></div>
     </div>
 
