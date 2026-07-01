@@ -128,12 +128,11 @@
                     cardEl.ondragstart = e => e.dataTransfer.setData("text", cardEl.id);
                     waste.appendChild(cardEl);
                 }
-            } else {
-                // Ha nincs mit visszavonni, adunk egy kis diszkrét jelzést a konzolnak, hogy ne akadjon el semmi
+         } else {
                 console.log("Nincs több visszavonható húzás a pakliban.");
             }
         }
-     }
+        
         init();
     </script>
 </body>
