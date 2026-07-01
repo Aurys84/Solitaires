@@ -2,20 +2,31 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <title>Nefi Solitaire - Objektum Motor</title>
+    <title>Nefi Solitaire - Végleges Dizájn</title>
     <style>
-        body { background: #0b3d0b; color: white; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; align-items: center; }
-        #top { display: flex; gap: 10px; margin: 20px; }
-        #table { display: flex; gap: 10px; }
-        .slot { width: 70px; height: 100px; border: 2px dashed #fff; border-radius: 5px; display: flex; align-items: center; justify-content: center; }
+        body { background: #0b3d0b; color: white; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; margin: 0; }
+        #top { display: flex; gap: 15px; margin-top: 20px; }
+        #table { display: flex; gap: 10px; margin-top: 20px; }
+        .slot { width: 70px; height: 100px; border: 2px dashed rgba(255,255,255,0.3); border-radius: 5px; display: flex; align-items: center; justify-content: center; }
         .column { width: 80px; position: relative; min-height: 400px; }
-        .card { width: 70px; height: 100px; background: white; color: black; border-radius: 5px; position: absolute; border: 1px solid #000; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; cursor: grab; }
+        .card { 
+            width: 70px; height: 100px; background: white; color: black; border-radius: 5px;
+            position: absolute; border: 1px solid #000; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; font-weight: bold; cursor: grab; box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+        }
+        .back { background: #2196F3; border: 3px solid white; color: transparent; }
         .red { color: red; }
+        button { padding: 10px 20px; cursor: pointer; background: #1a1a1a; color: #00ff41; border: 1px solid #00ff41; margin: 10px; }
     </style>
 </head>
 <body>
-    <div id="top"><div class="slot" id="stock" onclick="draw()">PAKLI</div><div class="slot" id="waste"></div></div>
+    <div id="top">
+        <div class="slot" id="stock" onclick="draw()">PAKLI</div>
+        <div class="slot" id="waste"></div>
+        <div class="slot"></div><div class="slot"></div><div class="slot"></div><div class="slot"></div>
+    </div>
     <div id="table"></div>
+    <button onclick="init()">ÚJ LEOSZTÁS</button>
 
     <script>
         let deck = [];
@@ -30,21 +41,15 @@
             for (let i = 0; i < 7; i++) {
                 const col = document.createElement('div');
                 col.className = 'column';
-                col.ondragover = (e) => e.preventDefault();
-                col.ondrop = (e) => {
-                    const cardId = e.dataTransfer.getData('text');
-                    const cardEl = document.getElementById(cardId);
-                    col.appendChild(cardEl);
-                };
                 for (let j = 0; j <= i; j++) {
                     const card = deck.pop();
                     const el = document.createElement('div');
+                    const isTop = (j === i);
                     el.id = card.id;
-                    el.className = 'card' + (['♥', '♦'].includes(card.s) ? ' red' : '');
+                    el.className = 'card' + (isTop ? '' : ' back') + (isTop && ['♥', '♦'].includes(card.s) ? ' red' : '');
                     el.style.top = (j * 25) + 'px';
-                    el.innerHTML = `<div>${card.v}</div><div>${card.s}</div>`;
-                    el.draggable = true;
-                    el.ondragstart = (e) => e.dataTransfer.setData('text', e.target.id);
+                    el.innerHTML = isTop ? `${card.v}<br>${card.s}` : '';
+                    el.draggable = isTop;
                     col.appendChild(el);
                 }
                 table.appendChild(col);
