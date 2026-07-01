@@ -17,7 +17,7 @@ body {
     margin-top: 20px;
 }
 
-/* Pasziánsz-asztal */
+/* Pasziánsz-asztal: Flex doboz, hogy egymás mellé tegye az oszlopokat */
 #table {
     display: flex;
     justify-content: center;
@@ -25,14 +25,14 @@ body {
     padding: 20px;
 }
 
-/* Az oszlop egy fix, 60px széles "sín" */
+/* Az oszlop a kártyák "sínje" */
 .tableau-column {
     width: 60px;
-    height: 400px; /* Elegendő hely a kártyáknak */
-    position: relative; /* Ez teszi lehetővé az abszolút pozicionálást */
+    height: 500px; 
+    position: relative; /* Ez kell ahhoz, hogy a kártyák az oszlopon belül mozogjanak */
 }
 
-/* Kártya stílus - abszolút "pasziánsz" */
+/* Kártya stílus - abszolút pozícióval a sínben */
 .card {
     width: 50px;
     height: 70px;
@@ -40,10 +40,12 @@ body {
     background-color: #1a1a1a;
     text-align: center;
     padding-top: 5px;
-    position: absolute; /* A JS fogja mozgatni őket a 'top' értékkel */
+    position: absolute; 
+    left: 5px; /* A 60px-es oszlop közepére igazít */
     cursor: grab;
     user-select: none;
     font-size: 14px;
+    box-sizing: border-box; /* Hogy a border ne növelje a méretet */
 }
 
 .card.red {
