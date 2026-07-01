@@ -9,13 +9,21 @@
         #table { display: flex; gap: 10px; margin-top: 20px; }
         .slot { width: 70px; height: 100px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 5px; display: flex; align-items: center; justify-content: center; position: relative; }
         .column { width: 80px; position: relative; min-height: 400px; }
+        
+        /* JAVÍTVA: Modern kártya design sarokjelzőkkel */
         .card { 
             width: 70px; height: 100px; background: white; color: black; border-radius: 5px;
             position: absolute; border: 1px solid #000; display: flex; flex-direction: column; 
-            align-items: center; justify-content: center; font-weight: bold; cursor: grab;
+            justify-content: space-between; font-weight: bold; cursor: grab;
             box-shadow: 2px 2px 5px rgba(0,0,0,0.5); user-select: none;
+            box-sizing: border-box; padding: 4px;
         }
-        .back { background: #2196F3; border: 3px solid white; color: transparent; }
+        .card-top { align-self: flex-start; text-align: left; font-size: 14px; line-height: 12px; }
+        .card-center { align-self: center; font-size: 20px; margin-top: -4px; }
+        .card-bottom { align-self: flex-end; text-align: right; font-size: 14px; line-height: 12px; transform: rotate(180deg); }
+
+        .back { background: #2196F3 !important; border: 3px solid white; color: transparent !important; }
+        .back * { display: none; } /* Rejtünk mindent a sarokból, ha hátlappal van fent */
         .red { color: red; }
     </style>
 </head>
@@ -100,16 +108,24 @@
         return Array.from(col.children).indexOf(card);
     }
 
+    // JAVÍTVA: HTML struktúra a sarkok generálásához
     function createCardEl(c, faceUp) {
         const el = document.createElement('div');
         el.id = c.id;
         el.setAttribute('data-suit', c.s);
         el.setAttribute('data-val', c.v);
         el.className = 'card' + (faceUp ? '' : ' back') + (faceUp && ['♥', '♦'].includes(c.s) ? ' red' : '');
-        el.innerHTML = faceUp ? `${c.v}<br>${c.s}` : '';
-        if(faceUp) {
+        
+        if (faceUp) {
+            el.innerHTML = `
+                <div class="card-top">${c.v}<br>${c.s}</div>
+                <div class="card-center">${c.s}</div>
+                <div class="card-bottom">${c.v}<br>${c.s}</div>
+            `;
             el.draggable = true;
             el.ondragstart = e => e.dataTransfer.setData("text", el.id);
+        } else {
+            el.innerHTML = '';
         }
         return el;
     }
@@ -174,6 +190,7 @@
         }
     }
 
+    // JAVÍTVA: Felfordításkor is megkapja a sarokelemeket!
     function revealTopCard(colEl) {
         if (colEl && colEl.children.length > 0) {
             const topCard = colEl.lastChild;
@@ -185,7 +202,11 @@
                 if (['♥', '♦'].includes(suit)) {
                     topCard.classList.add('red');
                 }
-                topCard.innerHTML = `${val}<br>${suit}`;
+                topCard.innerHTML = `
+                    <div class="card-top">${val}<br>${suit}</div>
+                    <div class="card-center">${suit}</div>
+                    <div class="card-bottom">${val}<br>${suit}</div>
+                `;
                 topCard.draggable = true;
                 topCard.ondragstart = e => e.dataTransfer.setData("text", topCard.id);
             }
@@ -231,6 +252,7 @@
         }
     }
 
+    // JAVÍTVA: A húzott lapnál is sarokjelzős felépítés él
     function updateWasteUI() {
         const waste = document.getElementById('waste');
         waste.innerHTML = '';
@@ -244,7 +266,11 @@
             cardEl.className = 'card' + (['♥', '♦'].includes(c.s) ? ' red' : '');
             cardEl.style.position = 'relative';
             cardEl.style.top = '0px';
-            cardEl.innerHTML = `${c.v}<br>${c.s}`;
+            cardEl.innerHTML = `
+                <div class="card-top">${c.v}<br>${c.s}</div>
+                <div class="card-center">${c.s}</div>
+                <div class="card-bottom">${c.v}<br>${c.s}</div>
+            `;
             cardEl.draggable = true;
             cardEl.ondragstart = e => e.dataTransfer.setData("text", cardEl.id);
             waste.appendChild(cardEl);
