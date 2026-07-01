@@ -103,23 +103,23 @@
             }
         }
         
-        // LÉPÉS 3: A VISSZA funkció tökéletesítése
+     // LÉPÉS 3: A VISSZA funkció tökéletesítése
         function undo() {
             if (history.length > 0) {
+                // Kivesszük az utolsó lapot a memóriából
                 const lastCard = history.pop();
                 
-                // KIJAVÍTVA: push helyett visszaadjuk a végére, ahonnan a pop leszedte
+                // KIJAVÍTVA: A tömb elejére szúrjuk be, hogy a pop() ne ugyanazt húzza ki azonnal!
                 deck.push(lastCard);
                 
                 const waste = document.getElementById('waste');
-                waste.innerHTML = ''; // Kiürítjük a dobópaklit
+                waste.innerHTML = ''; // Teljesen kiürítjük a kijelzőt
                 
-                // Ha maradt még korábbi lap, azt rendes .card dizájnnal rajzoljuk vissza
+                // Ha maradt még korábbi lap a memóriában, azt tesszük ki
                 if (history.length > 0) {
                     const prevCard = history[history.length - 1];
                     const cardEl = document.createElement('div');
                     cardEl.id = prevCard.id;
-                    // KIJAVÍTVA: Itt is kötelező a 'card ' osztály, hogy ne legyen átlátszó!
                     cardEl.className = 'card' + (['♥', '♦'].includes(prevCard.s) ? ' red' : '');
                     cardEl.style.position = 'relative';
                     cardEl.style.top = '0px';
@@ -128,8 +128,12 @@
                     cardEl.ondragstart = e => e.dataTransfer.setData("text", cardEl.id);
                     waste.appendChild(cardEl);
                 }
+            } else {
+                // Ha nincs mit visszavonni, adunk egy kis diszkrét jelzést a konzolnak, hogy ne akadjon el semmi
+                console.log("Nincs több visszavonható húzás a pakliban.");
             }
         }
+     }
         init();
     </script>
 </body>
