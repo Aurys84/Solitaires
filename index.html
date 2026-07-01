@@ -20,7 +20,7 @@
     </style>
 </head>
 <body>
- <div id="top">
+    <div id="top">
         <div class="slot" id="stock" onclick="draw()">PAKLI</div>
         <div class="slot" id="waste"></div>
         <div class="slot" id="fnd-0" ondragover="event.preventDefault()" ondrop="handleFoundationDrop(event, this)"></div>
@@ -52,6 +52,7 @@
             col.id = 'col-' + i;
             col.ondragover = e => e.preventDefault();
             col.ondrop = e => {
+                e.preventDefault();
                 const id = e.dataTransfer.getData("text");
                 const cardEl = document.getElementById(id);
                 if (!cardEl) return;
@@ -99,11 +100,12 @@
         return Array.from(col.children).indexOf(card);
     }
 
+    // Biztosítjuk, hogy a dataset tulajdonságok kisbetűvel legyenek írva (HTML szabvány)
     function createCardEl(c, faceUp) {
         const el = document.createElement('div');
         el.id = c.id;
-        el.dataset.suit = c.s;
-        el.dataset.val = c.v;
+        el.setAttribute('data-suit', c.s);
+        el.setAttribute('data-val', c.v);
         el.className = 'card' + (faceUp ? '' : ' back') + (faceUp && ['♥', '♦'].includes(c.s) ? ' red' : '');
         el.innerHTML = faceUp ? `${c.v}<br>${c.s}` : '';
         if(faceUp) {
@@ -113,30 +115,33 @@
         return el;
     }
 
-  function handleFoundationDrop(e, slot) {
-        e.preventDefault(); // KIJAVÍTVA: Ez kötelező az esemény elejére, hogy a böngésző ne blokkoljon!
+    function handleFoundationDrop(e, slot) {
+        e.preventDefault();
         const id = e.dataTransfer.getData("text");
         const cardEl = document.getElementById(id);
         if (!cardEl) return;
+
         const fromEl = cardEl.parentElement;
         const fromId = fromEl.id;
 
-        const cardSuit = cardEl.dataset.suit;
-        const cardVal = cardEl.dataset.val;
+        // KIJAVÍTVA: Kisbetűs dataset elérés, így garantáltan beolvassa!
+        const cardSuit = cardEl.getAttribute('data-suit');
+        const cardVal = cardEl.getAttribute('data-val');
         const cardRank = vals.indexOf(cardVal);
 
         let canMove = false;
 
         if (slot.children.length === 0) {
-            if (cardRank === 0) { // CSAK ÁSZ
+            if (cardRank === 0) { // CSAK ÁSZ (A)
                 canMove = true;
             }
         } else {
             const topCard = slot.lastChild;
-            const topSuit = topCard.dataset.suit;
-            const topRank = vals.indexOf(topCard.dataset.val);
+            const topSuit = topCard.getAttribute('data-suit');
+            const topVal = topCard.getAttribute('data-val');
+            const topRank = vals.indexOf(topVal);
 
-            // AZONOS SZÍN ÉS PONTOSAN EGGYEL NAGYOBB
+            // AZONOS SZÍN ÉS PONTOSAN EGGYEL NAGYOBB VALUE
             if (cardSuit === topSuit && cardRank === topRank + 1) {
                 canMove = true;
             }
@@ -177,8 +182,8 @@
             const topCard = colEl.lastChild;
             if (topCard.classList.contains('back')) {
                 topCard.classList.remove('back');
-                const suit = topCard.dataset.suit;
-                const val = topCard.dataset.val;
+                const suit = topCard.getAttribute('data-suit');
+                const val = topCard.getAttribute('data-val');
                 
                 if (['♥', '♦'].includes(suit)) {
                     topCard.classList.add('red');
@@ -219,8 +224,9 @@
             const c = draws[draws.length - 1].card;
             const cardEl = document.createElement('div');
             cardEl.id = c.id;
-            cardEl.dataset.suit = c.s; // RENDESEN ELMENTJÜK A HÚZOTT LAPNÁL IS!
-            cardEl.dataset.val = c.v;
+            // KIJAVÍTVA: A húzott lapnál is szabványos attribútumokat mentünk el!
+            cardEl.setAttribute('data-suit', c.s);
+            cardEl.setAttribute('data-val', c.v);
             cardEl.className = 'card' + (['♥', '♦'].includes(c.s) ? ' red' : '');
             cardEl.style.position = 'relative';
             cardEl.style.top = '0px';
