@@ -2,60 +2,51 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <title>Nefi Solitaires - Mátrix Labor</title>
+    <title>Nefi Solitaire Engine</title>
     <style>
-        body { background-color: #0d0f0d; color: #00ff41; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; align-items: center; }
-        #table { display: flex; justify-content: center; gap: 20px; padding: 20px; }
-        
-        /* A kártyákat tartalmazó oszlop */
-        .tableau-column { width: 50px; display: flex; flex-direction: column; }
-        
-        /* A kártya stílusa: itt a margin-top: -50px a kulcs a lépcsőzéshez */
+        body { background: #0b3d0b; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
+        #table { display: flex; gap: 10px; padding: 20px; }
+        .column { width: 80px; min-height: 400px; position: relative; }
         .card { 
-            width: 50px; height: 70px; border: 1px solid #00ff41; background-color: #1a1a1a; 
-            text-align: center; margin-top: -50px; cursor: pointer; font-size: 14px; 
-            padding-top: 5px; box-sizing: border-box; z-index: 1;
+            width: 70px; height: 100px; background: white; color: black; border-radius: 5px;
+            position: absolute; border: 1px solid #ccc; cursor: grab;
+            display: flex; justify-content: center; align-items: center; font-weight: bold;
         }
-        .card.red { color: #ff0000; }
-        
-        /* Az első kártya az oszlopban nem tolódik el felfelé */
-        .card:first-child { margin-top: 0; }
-        
-        button { background-color: #1a1a1a; color: #00ff41; border: 1px solid #00ff41; padding: 10px 20px; cursor: pointer; margin-top: 20px; }
+        .red { color: red; }
     </style>
 </head>
 <body>
     <div id="table"></div>
-    <button id="new-game-btn">Új leosztás</button>
-
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        const suits = ['♠', '♥', '♣', '♦'];
+        const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+        let deck = [];
+
+        function initGame() {
+            deck = [];
+            suits.forEach(s => values.forEach(v => deck.push({s, v})));
+            deck.sort(() => Math.random() - 0.5);
+            
             const table = document.getElementById('table');
-            const newGameBtn = document.getElementById('new-game-btn');
-
-            function renderDeck() {
-                table.innerHTML = '';
-                const suits = ['♠', '♥', '♣', '♦'];
-                const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-                let deck = [];
-                suits.forEach(s => values.forEach(v => deck.push({s, v})));
-                deck.sort(() => Math.random() - 0.5);
-
-                for (let i = 0; i < 7; i++) {
-                    const col = document.createElement('div');
-                    col.className = 'tableau-column';
-                    for (let j = 0; j < 5; j++) { // 5 lap oszloponként
-                        const card = deck.pop();
-                        const cardEl = document.createElement('div');
-                        cardEl.className = 'card' + (['♥', '♦'].includes(card.s) ? ' red' : '');
-                        cardEl.innerHTML = `${card.v}<br>${card.s}`;
-                        col.appendChild(cardEl);
-                    }
-                    table.appendChild(col);
+            table.innerHTML = '';
+            
+            for (let i = 0; i < 7; i++) {
+                const col = document.createElement('div');
+                col.className = 'column';
+                for (let j = 0; j <= i; j++) {
+                    const card = deck.pop();
+                    const el = document.createElement('div');
+                    el.className = 'card' + (['♥', '♦'].includes(card.s) ? ' red' : '');
+                    el.style.top = (j * 25) + 'px';
+                    el.innerHTML = card.v + card.s;
+                    el.draggable = true;
+                    el.addEventListener('dragstart', e => e.dataTransfer.setData('text', e.target.innerHTML));
+                    col.appendChild(el);
                 }
+                table.appendChild(col);
             }
-            newGameBtn.addEventListener('click', renderDeck);
-        });
+        }
+        initGame();
     </script>
 </body>
 </html>
