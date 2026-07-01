@@ -64,9 +64,43 @@
                 const id = e.dataTransfer.getData("text");
                 const cardEl = document.getElementById(id);
                 if (!cardEl) return;
+                
                 const fromId = cardEl.parentElement.id;
                 const fromEl = cardEl.parentElement;
                 
+                // --- ÚJ: TÁBLA PASZIÁNSZ SZABÁLYELLENŐRZÉS ---
+                const cardSuit = cardEl.getAttribute('data-suit');
+                const cardVal = cardEl.getAttribute('data-val');
+                const cardRank = vals.indexOf(cardVal);
+                const cardIsRed = ['♥', '♦'].includes(cardSuit);
+
+                let canDrop = false;
+
+                // Ha az oszlop üres, CSAK KIRÁLYT (K = Rank 12) szabad letenni
+                if (col.children.length === 0) {
+                    if (cardRank === 12) {
+                        canDrop = true;
+                    }
+                } else {
+                    // Ha van már lent lap, ellenőrizzük a legfelsőt
+                    const topCard = col.lastChild;
+                    const topSuit = topCard.getAttribute('data-suit');
+                    const topVal = topCard.getAttribute('data-val');
+                    const topRank = vals.indexOf(topVal);
+                    const topIsRed = ['♥', '♦'].includes(topSuit);
+
+                    // Feltétel: ellentétes szín ÉS pontosan eggyel kisebb érték
+                    if (cardIsRed !== topIsRed && cardRank === topRank - 1) {
+                        canDrop = true;
+                    }
+                }
+
+                if (!canDrop) {
+                    alert("Ide csak ellentétes színű és eggyel kisebb lapot tehetsz! Üres helyre csak Király rakható.");
+                    return;
+                }
+                // --------------------------------------------
+
                 let revealedCardId = null;
                 if (fromEl && fromEl.className === 'column' && fromEl.children.length > 1) {
                     const subTop = fromEl.children[fromInColumnIndex(fromEl, cardEl) - 1];
@@ -108,7 +142,6 @@
         return Array.from(col.children).indexOf(card);
     }
 
-    // JAVÍTVA: HTML struktúra a sarkok generálásához
     function createCardEl(c, faceUp) {
         const el = document.createElement('div');
         el.id = c.id;
@@ -190,7 +223,6 @@
         }
     }
 
-    // JAVÍTVA: Felfordításkor is megkapja a sarokelemeket!
     function revealTopCard(colEl) {
         if (colEl && colEl.children.length > 0) {
             const topCard = colEl.lastChild;
@@ -252,7 +284,6 @@
         }
     }
 
-    // JAVÍTVA: A húzott lapnál is sarokjelzős felépítés él
     function updateWasteUI() {
         const waste = document.getElementById('waste');
         waste.innerHTML = '';
