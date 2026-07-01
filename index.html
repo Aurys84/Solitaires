@@ -98,17 +98,19 @@
                 waste.appendChild(cardEl);
             }
         }
-        
         function undo() {
             if (history.length > 0) {
+                // 1. Kivesszük az utolsó lapot a memóriából
                 const lastCard = history.pop();
-                // Visszatesszük a pakliba úgy, hogy a következő draw() újra megkaphassa
+                
+                // 2. Visszatesszük a pakli tömbjébe
                 deck.push(lastCard);
                 
                 const waste = document.getElementById('waste');
+                // 3. KIJAVÍTVA: Teljesen leürítjük a dobópakli HTML tartalmát, hogy a régi lap fizikailag is eltűnjön!
                 waste.innerHTML = ''; 
                 
-                // Ha maradt még kártya a históriában, kirajzoljuk az előzőt
+                // 4. Ha maradt még korábbi húzás a memóriában, AKKOR és CSAK AKKOR rajzoljuk ki az előzőt
                 if (history.length > 0) {
                     const prevCard = history[history.length - 1];
                     const cardEl = document.createElement('div');
@@ -125,6 +127,7 @@
                 console.log("Nincs több visszavonható húzás.");
             }
         }
+      
     
         init();
     </script>
