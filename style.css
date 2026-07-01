@@ -17,10 +17,11 @@ body {
     margin-top: 20px;
 }
 
+/* Itt definiáljuk a pasziánsz-asztalt */
 #table {
     display: flex;
     justify-content: center;
-    gap: 15px;
+    gap: 10px;
     padding: 20px;
     flex-wrap: nowrap;
 }
@@ -46,6 +47,7 @@ button {
     padding: 10px 20px;
     cursor: pointer;
     font-weight: bold;
+    text-transform: uppercase;
 }
 
 button:hover {
@@ -53,17 +55,20 @@ button:hover {
     color: #000;
 }
 
-/* Kártya stílus - a pasziánszos "átlapolás" logikája */
+/* Kártya stílus - Labor-tiszta dizájn */
 .card {
     width: 50px;
     height: 70px;
     border: 1px solid #00ff41;
     background-color: #1a1a1a;
     text-align: center;
-    line-height: 20px;
     padding-top: 10px;
-    margin-bottom: -50px;
     position: relative;
     cursor: grab;
-    z-index: 0;
+    margin-bottom: -50px; /* Az átlapolás mértéke */
+}
+
+/* A vörös színek kiemelése */
+.card.red {
+    color: #ff0000;
 }
