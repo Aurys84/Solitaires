@@ -21,7 +21,7 @@ body {
 #table {
     display: flex;
     justify-content: center;
-    gap: 10px;
+    gap: 15px; /* Kicsit nagyobb hely az oszlopok között */
     padding: 20px;
     flex-wrap: nowrap;
 }
@@ -64,10 +64,10 @@ button:hover {
     text-align: center;
     line-height: 20px;
     padding-top: 10px;
-    margin-bottom: -50px; /* EZ A LÉNYEG: ettől csúsznak egymásra */
+    margin-bottom: -50px; /* Az átlapolás motorja */
     position: relative;
     cursor: grab;
-    z-index: auto; /* A JS-ből érkező érték felülírja */
+    z-index: 1; /* Alapértelmezett, a JS felülírja */
 }
 
 /* Különleges színkezelés a kártyákra */
