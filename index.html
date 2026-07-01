@@ -54,6 +54,7 @@
             col.ondrop = e => {
                 const id = e.dataTransfer.getData("text");
                 const cardEl = document.getElementById(id);
+                if (!cardEl) return;
                 const fromId = cardEl.parentElement.id;
                 const fromEl = cardEl.parentElement;
                 
@@ -91,7 +92,6 @@
             table.appendChild(col);
         }
         document.getElementById('waste').innerHTML = '';
-        // Tisztítsuk ki a gyűjtőket is új játék indításakor
         for(let i=0; i<4; i++) document.getElementById('fnd-'+i).innerHTML = '';
     }
 
@@ -99,7 +99,20 @@
         return Array.from(col.children).indexOf(card);
     }
 
- // JAVÍTVA: Pontos szabályellenőrzés az Ászokhoz és a színegyezőséghez
+    function createCardEl(c, faceUp) {
+        const el = document.createElement('div');
+        el.id = c.id;
+        el.dataset.suit = c.s;
+        el.dataset.val = c.v;
+        el.className = 'card' + (faceUp ? '' : ' back') + (faceUp && ['♥', '♦'].includes(c.s) ? ' red' : '');
+        el.innerHTML = faceUp ? `${c.v}<br>${c.s}` : '';
+        if(faceUp) {
+            el.draggable = true;
+            el.ondragstart = e => e.dataTransfer.setData("text", el.id);
+        }
+        return el;
+    }
+
     function handleFoundationDrop(e, slot) {
         const id = e.dataTransfer.getData("text");
         const cardEl = document.getElementById(id);
@@ -108,27 +121,23 @@
         const fromEl = cardEl.parentElement;
         const fromId = fromEl.id;
 
-        // Leolvassuk a kártya adatait (biztonsági mentésként a belső szövegből/osztályból, ha a dataset üres lenne)
-        const cardSuit = cardEl.dataset.suit || cardEl.innerHTML.split('<br>')[1] || cardEl.innerHTML.slice(-1);
-        const cardVal = cardEl.dataset.val || cardEl.innerHTML.split('<br>')[0] || cardEl.innerHTML.slice(0, -1);
-        const cardRank = vals.indexOf(cardVal.trim());
+        const cardSuit = cardEl.dataset.suit;
+        const cardVal = cardEl.dataset.val;
+        const cardRank = vals.indexOf(cardVal);
 
         let canMove = false;
 
-        // 1. SZABÁLY: Ha a gyűjtő üres, CSAK Ászt (Rank 0) engedünk be
         if (slot.children.length === 0) {
-            if (cardRank === 0) {
+            if (cardRank === 0) { // CSAK ÁSZ
                 canMove = true;
             }
         } else {
-            // 2. SZABÁLY: Ha már van benne lap, megnézzük a legfelsőt
             const topCard = slot.lastChild;
-            const topSuit = topCard.dataset.suit || topCard.innerHTML.split('<br>')[1] || topCard.innerHTML.slice(-1);
-            const topVal = topCard.dataset.val || topCard.innerHTML.split('<br>')[0] || topCard.innerHTML.slice(0, -1);
-            const topRank = vals.indexOf(topVal.trim());
+            const topSuit = topCard.dataset.suit;
+            const topRank = vals.indexOf(topCard.dataset.val);
 
-            // Szigorú ellenőrzés: CSAK UGYANAZ a szín/jel (♠=♠, ♥=♥) és PONTOSAN eggyel nagyobb érték!
-            if (cardSuit.trim() === topSuit.trim() && cardRank === topRank + 1) {
+            // AZONOS SZÍN ÉS PONTOSAN EGGYEL NAGYOBB
+            if (cardSuit === topSuit && cardRank === topRank + 1) {
                 canMove = true;
             }
         }
@@ -150,10 +159,6 @@
                 wasRevealed: revealedCardId
             });
 
-            // Biztosítjuk, hogy a kártya eleme megőrizze az adatait a gyűjtőben is
-            cardEl.dataset.suit = cardSuit.trim();
-            cardEl.dataset.val = cardVal.trim();
-
             slot.appendChild(cardEl);
             cardEl.style.position = 'absolute';
             cardEl.style.top = '0px';
@@ -164,6 +169,103 @@
             }
         } else {
             alert("Ide csak azonos színű és eggyel nagyobb lapot tehetsz, az alap pedig az Ász!");
+        }
+    }
+
+    function revealTopCard(colEl) {
+        if (colEl && colEl.children.length > 0) {
+            const topCard = colEl.lastChild;
+            if (topCard.classList.contains('back')) {
+                topCard.classList.remove('back');
+                const suit = topCard.dataset.suit;
+                const val = topCard.dataset.val;
+                
+                if (['♥', '♦'].includes(suit)) {
+                    topCard.classList.add('red');
+                }
+                topCard.innerHTML = `${val}<br>${suit}`;
+                topCard.draggable = true;
+                topCard.ondragstart = e => e.dataTransfer.setData("text", topCard.id);
+            }
+        }
+    }
+
+    function hideCard(cardEl) {
+        if (cardEl) {
+            cardEl.classList.add('back');
+            cardEl.classList.remove('red');
+            cardEl.innerHTML = '';
+            cardEl.draggable = false;
+            cardEl.ondragstart = null;
+        }
+    }
+
+    function draw() {
+        if(deck.length > 0) {
+            const c = deck.pop();
+            history.push({
+                type: 'draw',
+                card: c
+            }); 
+            updateWasteUI();
+        }
+    }
+
+    function updateWasteUI() {
+        const waste = document.getElementById('waste');
+        waste.innerHTML = '';
+        const draws = history.filter(h => h.type === 'draw');
+        if (draws.length > 0) {
+            const c = draws[draws.length - 1].card;
+            const cardEl = document.createElement('div');
+            cardEl.id = c.id;
+            cardEl.dataset.suit = c.s; // RENDESEN ELMENTJÜK A HÚZOTT LAPNÁL IS!
+            cardEl.dataset.val = c.v;
+            cardEl.className = 'card' + (['♥', '♦'].includes(c.s) ? ' red' : '');
+            cardEl.style.position = 'relative';
+            cardEl.style.top = '0px';
+            cardEl.innerHTML = `${c.v}<br>${c.s}`;
+            cardEl.draggable = true;
+            cardEl.ondragstart = e => e.dataTransfer.setData("text", cardEl.id);
+            waste.appendChild(cardEl);
+        }
+    }
+    
+    function undo() {
+        if (history.length > 0) {
+            const lastAction = history.pop();
+            
+            if (lastAction.type === 'draw') {
+                deck.push(lastAction.card);
+                updateWasteUI();
+            } 
+            else if (lastAction.type === 'move') {
+                const cardEl = document.getElementById(lastAction.cardId);
+                const fromEl = document.getElementById(lastAction.from);
+                
+                if (lastAction.wasRevealed) {
+                    hideCard(document.getElementById(lastAction.wasRevealed));
+                }
+
+                if (fromEl) {
+                    fromEl.appendChild(cardEl);
+                    if (lastAction.from === 'waste') {
+                        cardEl.style.position = 'relative';
+                        cardEl.style.top = '0px';
+                        cardEl.style.left = '0px';
+                    } else if (lastAction.from.startsWith('fnd-')) {
+                        cardEl.style.position = 'absolute';
+                        cardEl.style.top = '0px';
+                        cardEl.style.left = '0px';
+                    } else {
+                        cardEl.style.position = 'absolute';
+                        cardEl.style.top = ((fromEl.children.length - 1) * 25) + 'px';
+                        cardEl.style.left = '0px';
+                    }
+                }
+            }
+        } else {
+            console.log("Nincs több visszavonható lépés.");
         }
     }
 
