@@ -6,15 +6,21 @@
     <style>
         body { background-color: #0d0f0d; color: #00ff41; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; align-items: center; }
         #table { display: flex; justify-content: center; gap: 20px; padding: 20px; }
-        /* Oszlopok beállítása: csak szélesség, a kártyák egymás alá kerülnek */
+        
+        /* A kártyákat tartalmazó oszlop */
         .tableau-column { width: 50px; display: flex; flex-direction: column; }
-        /* Kártya stílus: statikus blokk, nem absolute! */
+        
+        /* A kártya stílusa: itt a margin-top: -50px a kulcs a lépcsőzéshez */
         .card { 
             width: 50px; height: 70px; border: 1px solid #00ff41; background-color: #1a1a1a; 
-            text-align: center; margin-top: -50px; /* Ez húzza őket egymásra */
-            cursor: pointer; font-size: 14px; padding-top: 5px; box-sizing: border-box;
+            text-align: center; margin-top: -50px; cursor: pointer; font-size: 14px; 
+            padding-top: 5px; box-sizing: border-box; z-index: 1;
         }
         .card.red { color: #ff0000; }
+        
+        /* Az első kártya az oszlopban nem tolódik el felfelé */
+        .card:first-child { margin-top: 0; }
+        
         button { background-color: #1a1a1a; color: #00ff41; border: 1px solid #00ff41; padding: 10px 20px; cursor: pointer; margin-top: 20px; }
     </style>
 </head>
@@ -33,12 +39,12 @@
                 const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
                 let deck = [];
                 suits.forEach(s => values.forEach(v => deck.push({s, v})));
-                deck.sort(() => Math.random() - 0.5); // Egyszerű keverés
+                deck.sort(() => Math.random() - 0.5);
 
                 for (let i = 0; i < 7; i++) {
                     const col = document.createElement('div');
                     col.className = 'tableau-column';
-                    for (let j = 0; j < 4; j++) {
+                    for (let j = 0; j < 5; j++) { // 5 lap oszloponként
                         const card = deck.pop();
                         const cardEl = document.createElement('div');
                         cardEl.className = 'card' + (['♥', '♦'].includes(card.s) ? ' red' : '');
