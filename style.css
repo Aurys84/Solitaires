@@ -22,14 +22,14 @@ body {
     justify-content: center;
     gap: 15px;
     padding: 20px;
-    flex-wrap: nowrap; /* Fontos: az oszlopok ne törjenek új sorba */
+    flex-wrap: nowrap;
 }
 
 .tableau-column {
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 60px; /* Fix szélesség az oszlopoknak */
+    width: 60px;
 }
 
 /* Vezérlőgombok */
@@ -62,7 +62,8 @@ button:hover {
     text-align: center;
     line-height: 20px;
     padding-top: 10px;
-    margin-bottom: -50px; /* A kártyák "egymásra csúsznak" */
+    margin-bottom: -50px;
     position: relative;
     cursor: grab;
+    z-index: 0;
 }
