@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 cardEl.className = 'card';
                 cardEl.style.zIndex = index; // Rétegezés
                 cardEl.style.marginTop = index === 0 ? '0' : '-50px'; // Az "átlapolás" trükkje
-                cardEl.innerHTML = `${card.value} ${card.suit}`;
+                cardEl.innerHTML = `${card.value}<br>${card.suit}`;
                 if (card.suit === '♥' || card.suit === '♦') cardEl.classList.add('red');
                 colDiv.appendChild(cardEl);
             });
