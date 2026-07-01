@@ -1,4 +1,3 @@
-// Nefi Solitaires - Mátrix Labor (Abszolút pozicionált motor)
 document.addEventListener('DOMContentLoaded', () => {
     const table = document.getElementById('table');
     const newGameBtn = document.getElementById('new-game-btn');
@@ -26,9 +25,10 @@ document.addEventListener('DOMContentLoaded', () => {
             col.forEach((card, index) => {
                 const cardEl = document.createElement('div');
                 cardEl.className = 'card';
-                // Abszolút pozíció beállítása: minden lap 25px-el lejjebb van, mint az előző
+                // Ezzel a 3 sorral kényszerítjük ki a lépcsőzést:
                 cardEl.style.position = 'absolute';
-                cardEl.style.top = (index * 25) + 'px';
+                cardEl.style.left = '0';
+                cardEl.style.top = (index * 25) + 'px'; 
                 cardEl.style.zIndex = index;
                 
                 cardEl.innerHTML = `${card.value}<br>${card.suit}`;
