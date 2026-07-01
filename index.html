@@ -100,7 +100,6 @@
         return Array.from(col.children).indexOf(card);
     }
 
-    // Biztosítjuk, hogy a dataset tulajdonságok kisbetűvel legyenek írva (HTML szabvány)
     function createCardEl(c, faceUp) {
         const el = document.createElement('div');
         el.id = c.id;
@@ -124,7 +123,6 @@
         const fromEl = cardEl.parentElement;
         const fromId = fromEl.id;
 
-        // KIJAVÍTVA: Kisbetűs dataset elérés, így garantáltan beolvassa!
         const cardSuit = cardEl.getAttribute('data-suit');
         const cardVal = cardEl.getAttribute('data-val');
         const cardRank = vals.indexOf(cardVal);
@@ -132,7 +130,7 @@
         let canMove = false;
 
         if (slot.children.length === 0) {
-            if (cardRank === 0) { // CSAK ÁSZ (A)
+            if (cardRank === 0) {
                 canMove = true;
             }
         } else {
@@ -141,7 +139,6 @@
             const topVal = topCard.getAttribute('data-val');
             const topRank = vals.indexOf(topVal);
 
-            // AZONOS SZÍN ÉS PONTOSAN EGGYEL NAGYOBB VALUE
             if (cardSuit === topSuit && cardRank === topRank + 1) {
                 canMove = true;
             }
@@ -205,8 +202,7 @@
         }
     }
 
-   function draw() {
-        // Ha van lap a pakliban, SImán húzunk egyet (ez javítja ki a beragadást!)
+    function draw() {
         if (deck.length > 0) {
             const c = deck.pop();
             history.push({
@@ -215,17 +211,12 @@
             }); 
             updateWasteUI();
         } 
-        // Ha teljesen elfogyott a pakli, AKKOR nézzük meg az újraforgatást
         else {
             const draws = history.filter(h => h.type === 'draw');
             if (draws.length > 0) {
-                // Kivesszük a kártyákat a history-ból
                 const recycledCards = draws.map(h => h.card);
-                
-                // Visszatöltjük a pakliba fordított sorrendben
                 deck = recycledCards.reverse();
                 
-                // Kitöröljük a régi draw-kat, és elmentjük az újraforgatást az undo-nak
                 history = history.filter(h => h.type !== 'draw');
                 history.push({
                     type: 'recycle',
@@ -240,6 +231,26 @@
         }
     }
 
+    function updateWasteUI() {
+        const waste = document.getElementById('waste');
+        waste.innerHTML = '';
+        const draws = history.filter(h => h.type === 'draw');
+        if (draws.length > 0) {
+            const c = draws[draws.length - 1].card;
+            const cardEl = document.createElement('div');
+            cardEl.id = c.id;
+            cardEl.setAttribute('data-suit', c.s);
+            cardEl.setAttribute('data-val', c.v);
+            cardEl.className = 'card' + (['♥', '♦'].includes(c.s) ? ' red' : '');
+            cardEl.style.position = 'relative';
+            cardEl.style.top = '0px';
+            cardEl.innerHTML = `${c.v}<br>${c.s}`;
+            cardEl.draggable = true;
+            cardEl.ondragstart = e => e.dataTransfer.setData("text", cardEl.id);
+            waste.appendChild(cardEl);
+        }
+    }
+    
     function undo() {
         if (history.length > 0) {
             const lastAction = history.pop();
@@ -250,7 +261,6 @@
             } 
             else if (lastAction.type === 'recycle') {
                 deck = [];
-                // Visszaállítjuk a húzásokat a dobópakliba
                 const originalCards = [...lastAction.cards].reverse();
                 originalCards.forEach(c => {
                     history.push({
