@@ -1,5 +1,6 @@
 NEFI SOLITAIRES
-
+---
+https://aurys84.github.io/Solitaires/
 ---
 Alap-kártyajáték
 ---
