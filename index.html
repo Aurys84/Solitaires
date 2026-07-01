@@ -30,106 +30,134 @@
         <button onclick="init()">ÚJ LEOSZTÁS</button>
         <button onclick="undo()">VISSZA</button>
     </div>
-    <script>
-        let deck = [];
-        let history = []; 
-        const suits = ['♠', '♥', '♣', '♦'], vals = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+  <script>
+    let deck = [];
+    let history = []; 
+    const suits = ['♠', '♥', '♣', '♦'], vals = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 
-        function init() {
-            deck = [];
-            history = []; 
-            suits.forEach(s => vals.forEach(v => deck.push({s, v, id: Math.random().toString(36).substr(2, 9)})));
-            deck.sort(() => Math.random() - 0.5);
-            const table = document.getElementById('table');
-            table.innerHTML = '';
-            
-            for (let i = 0; i < 7; i++) {
-                const col = document.createElement('div');
-                col.className = 'column';
-                col.ondragover = e => e.preventDefault();
-                col.ondrop = e => {
-                    const id = e.dataTransfer.getData("text");
-                    const cardEl = document.getElementById(id);
-                    col.appendChild(cardEl);
-                    cardEl.style.position = 'absolute';
-                    cardEl.style.top = ((col.children.length - 1) * 25) + 'px';
-                    cardEl.style.left = '0px';
-                };
-                for (let j = 0; j <= i; j++) {
-                    const c = deck.pop();
-                    const el = createCardEl(c, j === i);
-                    el.style.top = (j * 25) + 'px';
-                    col.appendChild(el);
-                }
-                table.appendChild(col);
-            }
-            document.getElementById('waste').innerHTML = '';
-        }
+    function init() {
+        deck = [];
+        history = []; 
+        suits.forEach(s => vals.forEach(v => deck.push({s, v, id: Math.random().toString(36).substr(2, 9)})));
+        deck.sort(() => Math.random() - 0.5);
+        const table = document.getElementById('table');
+        table.innerHTML = '';
+        
+        for (let i = 0; i < 7; i++) {
+            const col = document.createElement('div');
+            col.className = 'column';
+            col.id = 'col-' + i; // Egyedi ID az oszlopoknak a memóriához
+            col.ondragover = e => e.preventDefault();
+            col.ondrop = e => {
+                const id = e.dataTransfer.getData("text");
+                const cardEl = document.getElementById(id);
+                const fromId = cardEl.parentElement.id; // Elmentjük, honnan jött
+                
+                // Mentés a memóriába (táblás mozgás)
+                history.push({
+                    type: 'move',
+                    cardId: id,
+                    from: fromId,
+                    to: col.id
+                });
 
-        function createCardEl(c, faceUp) {
-            const el = document.createElement('div');
-            el.id = c.id;
-            el.className = 'card' + (faceUp ? '' : ' back') + (faceUp && ['♥', '♦'].includes(c.s) ? ' red' : '');
-            el.innerHTML = faceUp ? `${c.v}<br>${c.s}` : '';
-            if(faceUp) {
-                el.draggable = true;
-                el.ondragstart = e => e.dataTransfer.setData("text", el.id);
-            }
-            return el;
-        }
-
-        function draw() {
-            if(deck.length > 0) {
+                col.appendChild(cardEl);
+                cardEl.style.position = 'absolute';
+                cardEl.style.top = ((col.children.length - 1) * 25) + 'px';
+                cardEl.style.left = '0px';
+            };
+            for (let j = 0; j <= i; j++) {
                 const c = deck.pop();
-                history.push(c); 
-                
-                const waste = document.getElementById('waste');
-                waste.innerHTML = '';
-                
-                const cardEl = document.createElement('div');
-                cardEl.id = c.id;
-                cardEl.className = 'card' + (['♥', '♦'].includes(c.s) ? ' red' : '');
-                cardEl.style.position = 'relative';
-                cardEl.style.top = '0px';
-                cardEl.innerHTML = `${c.v}<br>${c.s}`;
-                cardEl.draggable = true;
-                cardEl.ondragstart = e => e.dataTransfer.setData("text", cardEl.id);
-                
-                waste.appendChild(cardEl);
+                const el = createCardEl(c, j === i);
+                el.style.top = (j * 25) + 'px';
+                col.appendChild(el);
             }
+            table.appendChild(col);
         }
-        function undo() {
-            if (history.length > 0) {
-                // 1. Kivesszük az utolsó lapot a memóriából
-                const lastCard = history.pop();
-                
-                // 2. Visszatesszük a pakli tömbjébe
-                deck.push(lastCard);
-                
-                const waste = document.getElementById('waste');
-                // 3. KIJAVÍTVA: Teljesen leürítjük a dobópakli HTML tartalmát, hogy a régi lap fizikailag is eltűnjön!
-                waste.innerHTML = ''; 
-                
-                // 4. Ha maradt még korábbi húzás a memóriában, AKKOR és CSAK AKKOR rajzoljuk ki az előzőt
-                if (history.length > 0) {
-                    const prevCard = history[history.length - 1];
-                    const cardEl = document.createElement('div');
-                    cardEl.id = prevCard.id;
-                    cardEl.className = 'card' + (['♥', '♦'].includes(prevCard.s) ? ' red' : '');
-                    cardEl.style.position = 'relative';
-                    cardEl.style.top = '0px';
-                    cardEl.innerHTML = `${prevCard.v}<br>${prevCard.s}`;
-                    cardEl.draggable = true;
-                    cardEl.ondragstart = e => e.dataTransfer.setData("text", cardEl.id);
-                    waste.appendChild(cardEl);
-                }
-            } else {
-                console.log("Nincs több visszavonható húzás.");
-            }
+        document.getElementById('waste').innerHTML = '';
+    }
+
+    function createCardEl(c, faceUp) {
+        const el = document.createElement('div');
+        el.id = c.id;
+        // Eltároljuk az adatokat a HTML-ben is, hogy később könnyen leolvashassuk
+        el.dataset.suit = c.s;
+        el.dataset.val = c.v;
+        el.className = 'card' + (faceUp ? '' : ' back') + (faceUp && ['♥', '♦'].includes(c.s) ? ' red' : '');
+        el.innerHTML = faceUp ? `${c.v}<br>${c.s}` : '';
+        if(faceUp) {
+            el.draggable = true;
+            el.ondragstart = e => e.dataTransfer.setData("text", el.id);
         }
-      
+        return el;
+    }
+
+    function draw() {
+        if(deck.length > 0) {
+            const c = deck.pop();
+            
+            // Mentés a memóriába (húzás)
+            history.push({
+                type: 'draw',
+                card: c
+            }); 
+            
+            updateWasteUI();
+        }
+    }
+
+    // Segédfunkció a dobópakli tiszta kirajzolásához
+    function updateWasteUI() {
+        const waste = document.getElementById('waste');
+        waste.innerHTML = '';
+        
+        // Megkeressük az utolsó olyan elemet a history-ban, ami 'draw' típusú
+        const draws = history.filter(h => h.type === 'draw');
+        if (draws.length > 0) {
+            const c = draws[draws.length - 1].card;
+            const cardEl = document.createElement('div');
+            cardEl.id = c.id;
+            cardEl.className = 'card' + (['♥', '♦'].includes(c.s) ? ' red' : '');
+            cardEl.style.position = 'relative';
+            cardEl.style.top = '0px';
+            cardEl.innerHTML = `${c.v}<br>${c.s}`;
+            cardEl.draggable = true;
+            cardEl.ondragstart = e => e.dataTransfer.setData("text", cardEl.id);
+            waste.appendChild(cardEl);
+        }
+    }
     
-        init();
-    </script>
+    function undo() {
+        if (history.length > 0) {
+            const lastAction = history.pop();
+            
+            if (lastAction.type === 'draw') {
+                // Ha húzás volt, visszatesszük a kártyát a pakliba
+                deck.push(lastAction.card);
+                updateWasteUI();
+            } 
+            else if (lastAction.type === 'move') {
+                // Ha táblás mozgatás volt, visszatesszük az eredeti helyére!
+                const cardEl = document.getElementById(lastAction.cardId);
+                const fromEl = document.getElementById(lastAction.from);
+                
+                if (fromEl) {
+                    fromEl.appendChild(cardEl);
+                    if (lastAction.from === 'waste') {
+                        cardEl.style.position = 'relative';
+                        cardEl.style.top = '0px';
+                    } else {
+                        cardEl.style.position = 'absolute';
+                        cardEl.style.top = ((fromEl.children.length - 1) * 25) + 'px';
+                    }
+                }
+            }
+        } else {
+            console.log("Nincs több visszavonható lépés.");
+        }
+    }
+
+    init();
+</script>  
 </body>
 </html>
