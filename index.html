@@ -2,32 +2,72 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nefi Solitaires - Mátrix Labor</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Nefi Solitaires - Mátrix Labor (Minden egyben)</title>
+    <style>
+        body { margin: 0; padding: 0; background-color: #0d0f0d; color: #00ff41; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        #game-container { width: 90%; max-width: 800px; margin-top: 20px; }
+        #table { display: flex; justify-content: center; gap: 15px; padding: 20px; }
+        .tableau-column { width: 60px; height: 500px; position: relative; }
+        .card { 
+            width: 50px; height: 70px; border: 1px solid #00ff41; background-color: #1a1a1a; 
+            text-align: center; padding-top: 5px; position: absolute; cursor: grab; user-select: none; font-size: 14px;
+        }
+        .card.red { color: #ff0000; }
+        #controls { margin-top: 20px; display: flex; gap: 15px; }
+        button { background-color: #1a1a1a; color: #00ff41; border: 1px solid #00ff41; padding: 10px 20px; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #00ff41; color: #000; }
+    </style>
 </head>
 <body>
 
     <div id="game-container">
-        <div id="top-area">
-            <div id="stock-pile" class="pile"></div>
-            <div id="waste-pile" class="pile"></div>
-            <div id="foundations">
-                <div class="foundation" data-suit="♠"></div>
-                <div class="foundation" data-suit="♥"></div>
-                <div class="foundation" data-suit="♣"></div>
-                <div class="foundation" data-suit="♦"></div>
-            </div>
-        </div>
-
         <div id="table"></div>
     </div>
 
     <div id="controls">
-        <button id="undo-btn">Vissza</button>
         <button id="new-game-btn">Új leosztás</button>
     </div>
 
-    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const table = document.getElementById('table');
+            const newGameBtn = document.getElementById('new-game-btn');
+
+            function shuffleDeck() {
+                const suits = ['♠', '♥', '♣', '♦'];
+                const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+                let deck = [];
+                suits.forEach(suit => values.forEach(value => deck.push({ suit, value })));
+                for (let i = deck.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [deck[i], deck[j]] = [deck[j], deck[i]];
+                }
+                return deck;
+            }
+
+            function renderDeck(deck) {
+                table.innerHTML = '';
+                const columns = Array.from({ length: 7 }, () => []);
+                deck.slice(0, 28).forEach((card, index) => columns[index % 7].push(card));
+
+                columns.forEach(col => {
+                    const colDiv = document.createElement('div');
+                    colDiv.className = 'tableau-column';
+                    col.forEach((card, index) => {
+                        const cardEl = document.createElement('div');
+                        cardEl.className = 'card';
+                        cardEl.style.top = (index * 25) + 'px'; 
+                        cardEl.style.zIndex = index;
+                        cardEl.innerHTML = `${card.value}<br>${card.suit}`;
+                        if (card.suit === '♥' || card.suit === '♦') cardEl.classList.add('red');
+                        colDiv.appendChild(cardEl);
+                    });
+                    table.appendChild(colDiv);
+                });
+            }
+
+            newGameBtn.addEventListener('click', () => renderDeck(shuffleDeck()));
+        });
+    </script>
 </body>
 </html>
