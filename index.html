@@ -28,14 +28,17 @@
     <div id="table"></div>
     <div style="margin-top:20px;">
         <button onclick="init()">ÚJ LEOSZTÁS</button>
-        <button onclick="alert('Visszaléptünk!')">VISSZA</button>
+        <button onclick="undo()">VISSZA</button>
     </div>
 <script>
         let deck = [];
+        // LÉPÉS 1: Létrehozunk egy memóriát a lépéseknek
+        let history = []; 
         const suits = ['♠', '♥', '♣', '♦'], vals = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 
         function init() {
             deck = [];
+            history = []; // Új osztásnál a memória is ürül
             suits.forEach(s => vals.forEach(v => deck.push({s, v, id: Math.random().toString(36).substr(2, 9)})));
             deck.sort(() => Math.random() - 0.5);
             const table = document.getElementById('table');
@@ -49,7 +52,6 @@
                     const id = e.dataTransfer.getData("text");
                     const cardEl = document.getElementById(id);
                     col.appendChild(cardEl);
-                    // Újrapozicionálás az oszlopban
                     cardEl.style.position = 'absolute';
                     cardEl.style.top = ((col.children.length - 1) * 25) + 'px';
                     cardEl.style.left = '0px';
@@ -76,36 +78,59 @@
             }
             return el;
         }
-function draw() {
+
+        function draw() {
             if(deck.length > 0) {
                 const c = deck.pop();
-                const waste = document.getElementById('waste');
                 
-                // Kiürítjük a dobópakli helyét, mielőtt új lapot teszünk bele
+                // LÉPÉS 2: Elmentjük a kártyát a memóriába, mielőtt megmutatjuk
+                history.push(c); 
+                
+                const waste = document.getElementById('waste');
                 waste.innerHTML = '';
                 
-                // Létrehozunk egy valódi kártya objektumot/elemet a kereten BELÜL
                 const cardEl = document.createElement('div');
                 cardEl.id = c.id;
-                
-                // Megkapja a rendes kártya kinézetet (.card) és a piros színt, ha kell (.red)
                 cardEl.className = 'card' + (['♥', '♦'].includes(c.s) ? ' red' : '');
-                
-                // Mivel a .card pozíciója absolute, a waste sloton belül középre igazítjuk
                 cardEl.style.position = 'relative';
                 cardEl.style.top = '0px';
-                
                 cardEl.innerHTML = `${c.v}<br>${c.s}`;
                 cardEl.draggable = true;
                 cardEl.ondragstart = e => e.dataTransfer.setData("text", cardEl.id);
                 
-                // Beletesszük a kártyát a keretbe
                 waste.appendChild(cardEl);
+            }
+        }
+        
+        // LÉPÉS 3: A VISSZA funkció megvalósítása a húzásra
+        function undo() {
+            if (history.length > 0) {
+                // Kiveszzük az utolsó húzott lapot a történelemből
+                const lastCard = history.pop();
+                
+                // Visszatesszük a pakli tetejére
+                deck.push(lastCard);
+                
+                const waste = document.getElementById('waste');
+                waste.innerHTML = ''; // Kiürítjük a dobópaklit
+                
+                // Ha maradt még korábbi lap a históriában, azt visszarajzoljuk a dobópaklira
+                if (history.length > 0) {
+                    const prevCard = history[history.length - 1];
+                    const cardEl = document.createElement('div');
+                    cardEl.id = prevCard.id;
+                    cardEl.className = 'card' + (['♥', '♦'].includes(prevCard.s) ? ' red' : '');
+                    cardEl.style.position = 'relative';
+                    cardEl.style.top = '0px';
+                    cardEl.innerHTML = `${prevCard.v}<br>${prevCard.s}`;
+                    cardEl.draggable = true;
+                    cardEl.ondragstart = e => e.dataTransfer.setData("text", cardEl.id);
+                    waste.appendChild(cardEl);
+                }
             }
         }
     
         init();
     </script>
-  
 </body>
 </html>
