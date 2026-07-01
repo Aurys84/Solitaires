@@ -30,7 +30,7 @@
         <button onclick="init()">ÚJ LEOSZTÁS</button>
         <button onclick="undo()">VISSZA</button>
     </div>
-  <script>
+<script>
     let deck = [];
     let history = []; 
     const suits = ['♠', '♥', '♣', '♦'], vals = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
@@ -46,25 +46,40 @@
         for (let i = 0; i < 7; i++) {
             const col = document.createElement('div');
             col.className = 'column';
-            col.id = 'col-' + i; // Egyedi ID az oszlopoknak a memóriához
+            col.id = 'col-' + i;
             col.ondragover = e => e.preventDefault();
             col.ondrop = e => {
                 const id = e.dataTransfer.getData("text");
                 const cardEl = document.getElementById(id);
-                const fromId = cardEl.parentElement.id; // Elmentjük, honnan jött
+                const fromId = cardEl.parentElement.id;
+                const fromEl = cardEl.parentElement;
                 
-                // Mentés a memóriába (táblás mozgás)
+                // Megnézzük, hogy az elhúzott lap alatt volt-e egy lezárt lap, ami most fel fog fordulni
+                let revealedCardId = null;
+                if (fromEl && fromEl.className === 'column' && fromEl.children.length > 1) {
+                    const subTop = fromEl.children[fromInColumnIndex(fromEl, cardEl) - 1];
+                    if (subTop && subTop.classList.contains('back')) {
+                        revealedCardId = subTop.id;
+                    }
+                }
+
                 history.push({
                     type: 'move',
                     cardId: id,
                     from: fromId,
-                    to: col.id
+                    to: col.id,
+                    wasRevealed: revealedCardId // Elmentjük a memóriába, ha történt felfordulás
                 });
 
                 col.appendChild(cardEl);
                 cardEl.style.position = 'absolute';
                 cardEl.style.top = ((col.children.length - 1) * 25) + 'px';
                 cardEl.style.left = '0px';
+
+                // Ha onnan vettük el, ellenőrizzük és felfordítjuk az ott maradt legfelsőt
+                if (fromId.startsWith('col-')) {
+                    revealTopCard(fromEl);
+                }
             };
             for (let j = 0; j <= i; j++) {
                 const c = deck.pop();
@@ -77,10 +92,44 @@
         document.getElementById('waste').innerHTML = '';
     }
 
+    // Segédfunkció, ami megmondja egy kártya indexét az oszlopon belül
+    function fromInColumnIndex(col, card) {
+        return Array.from(col.children).indexOf(card);
+    }
+
+    // ÚJ: Ez a funkció felelős az oszlop legfelső lapjának felfordításáért
+    function revealTopCard(colEl) {
+        if (colEl && colEl.children.length > 0) {
+            const topCard = colEl.lastChild;
+            if (topCard.classList.contains('back')) {
+                topCard.classList.remove('back');
+                const suit = topCard.dataset.suit;
+                const val = topCard.dataset.val;
+                
+                if (['♥', '♦'].includes(suit)) {
+                    topCard.classList.add('red');
+                }
+                topCard.innerHTML = `${val}<br>${suit}`;
+                topCard.draggable = true;
+                topCard.ondragstart = e => e.dataTransfer.setData("text", topCard.id);
+            }
+        }
+    }
+
+    // ÚJ: Ez a funkció visszazárja a lapot, ha az undo() miatt visszapakolunk rá egyet
+    function hideCard(cardEl) {
+        if (cardEl) {
+            cardEl.classList.add('back');
+            cardEl.classList.remove('red');
+            cardEl.innerHTML = '';
+            cardEl.draggable = false;
+            cardEl.ondragstart = null;
+        }
+    }
+
     function createCardEl(c, faceUp) {
         const el = document.createElement('div');
         el.id = c.id;
-        // Eltároljuk az adatokat a HTML-ben is, hogy később könnyen leolvashassuk
         el.dataset.suit = c.s;
         el.dataset.val = c.v;
         el.className = 'card' + (faceUp ? '' : ' back') + (faceUp && ['♥', '♦'].includes(c.s) ? ' red' : '');
@@ -95,23 +144,17 @@
     function draw() {
         if(deck.length > 0) {
             const c = deck.pop();
-            
-            // Mentés a memóriába (húzás)
             history.push({
                 type: 'draw',
                 card: c
             }); 
-            
             updateWasteUI();
         }
     }
 
-    // Segédfunkció a dobópakli tiszta kirajzolásához
     function updateWasteUI() {
         const waste = document.getElementById('waste');
         waste.innerHTML = '';
-        
-        // Megkeressük az utolsó olyan elemet a history-ban, ami 'draw' típusú
         const draws = history.filter(h => h.type === 'draw');
         if (draws.length > 0) {
             const c = draws[draws.length - 1].card;
@@ -132,15 +175,18 @@
             const lastAction = history.pop();
             
             if (lastAction.type === 'draw') {
-                // Ha húzás volt, visszatesszük a kártyát a pakliba
                 deck.push(lastAction.card);
                 updateWasteUI();
             } 
             else if (lastAction.type === 'move') {
-                // Ha táblás mozgatás volt, visszatesszük az eredeti helyére!
                 const cardEl = document.getElementById(lastAction.cardId);
                 const fromEl = document.getElementById(lastAction.from);
                 
+                // Ha ez a lépés fordított fel lapot, akkor visszalépésnél azt vissza kell zárni!
+                if (lastAction.wasRevealed) {
+                    hideCard(document.getElementById(lastAction.wasRevealed));
+                }
+
                 if (fromEl) {
                     fromEl.appendChild(cardEl);
                     if (lastAction.from === 'waste') {
@@ -158,6 +204,6 @@
     }
 
     init();
-</script>  
+</script>
 </body>
 </html>
