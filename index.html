@@ -47,25 +47,38 @@
     const suits = ['♠', '♥', '♣', '♦'], vals = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 
     function init() {
+        // RADIKÁLIS JAVÍTÁS: Minden felületi elemet AZONNAL letakarítunk, még a pakli generálása ELŐTT!
+        const table = document.getElementById('table');
+        table.innerHTML = '';
+        document.getElementById('waste').innerHTML = '';
+        for(let i=0; i<4; i++) {
+            document.getElementById('fnd-'+i).innerHTML = '';
+        }
+
         deck = [];
         history = []; 
         
+        // Egyedi leosztás azonosító, hogy a régi játék kártyái véletlenül se zavarják be a memóriát
+        const gameId = Math.random().toString(36).substr(2, 4);
+
         // Tiszta 52 lapos pakli generálása
         suits.forEach(s => {
             vals.forEach(v => {
-                deck.push({ s: s, v: v, id: 'card-' + s + '-' + v });
+                deck.push({ 
+                    s: s, 
+                    v: v, 
+                    id: 'c-' + gameId + '-' + s + '-' + v // Szuper-egyedi ID a jelenlegi menethez
+                });
             });
         });
         
-        // KIJAVÍTVA: Atombiztos Fisher-Yates keverési algoritmus (NINCS TÖBB EGYFORMA LAP!)
+        // Atombiztos Fisher-Yates keverési algoritmus
         for (let i = deck.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [deck[i], deck[j]] = [deck[j], deck[i]];
         }
         
-        const table = document.getElementById('table');
-        table.innerHTML = '';
-        
+        // Oszlopok felépítése
         for (let i = 0; i < 7; i++) {
             const col = document.createElement('div');
             col.className = 'column';
@@ -89,7 +102,7 @@
                 let canDrop = false;
 
                 if (col.children.length === 0) {
-                    if (cardRank === 12) { // Csak Király mehet az üres helyre
+                    if (cardRank === 12) { 
                         canDrop = true;
                     }
                 } else {
@@ -109,7 +122,7 @@
                     return;
                 }
 
-                // KIJAVÍTVA: Csoportos mozgatás logikája (minden alatta lévő lapot visz magával)
+                // Csoportos mozgatás logikája
                 const cardsToMove = [];
                 const children = Array.from(fromEl.children);
                 const startIndex = children.indexOf(cardEl);
@@ -126,7 +139,6 @@
                     }
                 }
 
-                // Elmentjük a memóriába a teljes csoportos mozgást
                 history.push({
                     type: 'move_group',
                     cardIds: cardsToMove.map(c => c.id),
@@ -135,7 +147,6 @@
                     wasRevealed: revealedCardId
                 });
 
-                // Áthelyezzük a kártyaláncot az új oszlopba
                 cardsToMove.forEach(c => {
                     col.appendChild(c);
                     c.style.position = 'absolute';
@@ -156,8 +167,6 @@
             }
             table.appendChild(col);
         }
-        document.getElementById('waste').innerHTML = '';
-        for(let i=0; i<4; i++) document.getElementById('fnd-'+i).innerHTML = '';
     }
 
     function fromInColumnIndex(col, card) {
@@ -194,7 +203,6 @@
         const fromEl = cardEl.parentElement;
         const fromId = fromEl.id;
 
-        // A gyűjtőbe csak egyetlen lapot engedünk feltenni (a legfelsőt)
         if (cardEl !== fromEl.lastChild) {
             alert("A gyűjtőbe csak a legfelső lapot teheted át!");
             return;
