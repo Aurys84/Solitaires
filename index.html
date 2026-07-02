@@ -23,7 +23,7 @@
         .card-bottom { align-self: flex-end; text-align: right; font-size: 14px; line-height: 12px; transform: rotate(180deg); }
 
         .back { background: #2196F3 !important; border: 3px solid white; color: transparent !important; }
-        .back * { display: none; } /* Rejtünk mindent a sarokból, ha hátlappal van fent */
+        .back * { display: none; }
         .red { color: red; }
     </style>
 </head>
@@ -47,22 +47,21 @@
     const suits = ['♠', '♥', '♣', '♦'], vals = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 
     function init() {
-        // JAVÍTVA: Mindig teljesen üres tömbből építjük újra a tiszta 52 lapos paklit
         deck = [];
         history = []; 
         
+        // Tiszta 52 lapos pakli generálása
         suits.forEach(s => {
             vals.forEach(v => {
-                deck.push({
-                    s: s, 
-                    v: v, 
-                    id: 'card-' + s + '-' + v // JAVÍTVA: Az ID most már szigorúan leírja a lapot, így kizárt a duplikáció
-                });
+                deck.push({ s: s, v: v, id: 'card-' + s + '-' + v });
             });
         });
         
-        // Biztonságos keverés
-        deck.sort(() => Math.random() - 0.5);
+        // KIJAVÍTVA: Atombiztos Fisher-Yates keverési algoritmus (NINCS TÖBB EGYFORMA LAP!)
+        for (let i = deck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [deck[i], deck[j]] = [deck[j], deck[i]];
+        }
         
         const table = document.getElementById('table');
         table.innerHTML = '';
@@ -78,8 +77,8 @@
                 const cardEl = document.getElementById(id);
                 if (!cardEl) return;
                 
-                const fromId = cardEl.parentElement.id;
                 const fromEl = cardEl.parentElement;
+                const fromId = fromEl.id;
                 
                 // --- TÁBLA PASZIÁNSZ SZABÁLYELLENŐRZÉS ---
                 const cardSuit = cardEl.getAttribute('data-suit');
@@ -90,7 +89,7 @@
                 let canDrop = false;
 
                 if (col.children.length === 0) {
-                    if (cardRank === 12) {
+                    if (cardRank === 12) { // Csak Király mehet az üres helyre
                         canDrop = true;
                     }
                 } else {
@@ -110,26 +109,39 @@
                     return;
                 }
 
+                // KIJAVÍTVA: Csoportos mozgatás logikája (minden alatta lévő lapot visz magával)
+                const cardsToMove = [];
+                const children = Array.from(fromEl.children);
+                const startIndex = children.indexOf(cardEl);
+                
+                for (let k = startIndex; k < children.length; k++) {
+                    cardsToMove.push(children[k]);
+                }
+
                 let revealedCardId = null;
-                if (fromEl && fromEl.className === 'column' && fromEl.children.length > 1) {
-                    const subTop = fromEl.children[fromInColumnIndex(fromEl, cardEl) - 1];
+                if (fromEl && fromEl.className === 'column' && startIndex > 0) {
+                    const subTop = fromEl.children[startIndex - 1];
                     if (subTop && subTop.classList.contains('back')) {
                         revealedCardId = subTop.id;
                     }
                 }
 
+                // Elmentjük a memóriába a teljes csoportos mozgást
                 history.push({
-                    type: 'move',
-                    cardId: id,
+                    type: 'move_group',
+                    cardIds: cardsToMove.map(c => c.id),
                     from: fromId,
                     to: col.id,
                     wasRevealed: revealedCardId
                 });
 
-                col.appendChild(cardEl);
-                cardEl.style.position = 'absolute';
-                cardEl.style.top = ((col.children.length - 1) * 25) + 'px';
-                cardEl.style.left = '0px';
+                // Áthelyezzük a kártyaláncot az új oszlopba
+                cardsToMove.forEach(c => {
+                    col.appendChild(c);
+                    c.style.position = 'absolute';
+                    c.style.top = ((col.children.length - 1) * 25) + 'px';
+                    c.style.left = '0px';
+                });
 
                 if (fromId.startsWith('col-')) {
                     revealTopCard(fromEl);
@@ -182,6 +194,12 @@
         const fromEl = cardEl.parentElement;
         const fromId = fromEl.id;
 
+        // A gyűjtőbe csak egyetlen lapot engedünk feltenni (a legfelsőt)
+        if (cardEl !== fromEl.lastChild) {
+            alert("A gyűjtőbe csak a legfelső lapot teheted át!");
+            return;
+        }
+
         const cardSuit = cardEl.getAttribute('data-suit');
         const cardVal = cardEl.getAttribute('data-val');
         const cardRank = vals.indexOf(cardVal);
@@ -213,8 +231,8 @@
             }
 
             history.push({
-                type: 'move',
-                cardId: id,
+                type: 'move_group',
+                cardIds: [id],
                 from: fromId,
                 to: slot.id,
                 wasRevealed: revealedCardId
@@ -229,15 +247,12 @@
                 revealTopCard(fromEl);
             }
             
-            // --- ÚJ: GYŐZELEM ELLENŐRZÉSE ---
             checkWinCondition();
-            
         } else {
             alert("Ide csak azonos színű és eggyel nagyobb lapot tehetsz, az alap pedig az Ász!");
         }
     }
 
-    // ÚJ: Ellenőrizzük, hogy mind az 52 lap a helyén van-e a fenti alapokon
     function checkWinCondition() {
         let totalCardsInFoundations = 0;
         for (let i = 0; i < 4; i++) {
@@ -354,29 +369,31 @@
                 });
                 updateWasteUI();
             }
-            else if (lastAction.type === 'move') {
-                const cardEl = document.getElementById(lastAction.cardId);
-                const fromEl = document.getElementById(lastAction.from);
-                
+            else if (lastAction.type === 'move_group') {
                 if (lastAction.wasRevealed) {
                     hideCard(document.getElementById(lastAction.wasRevealed));
                 }
 
+                const fromEl = document.getElementById(lastAction.from);
                 if (fromEl) {
-                    fromEl.appendChild(cardEl);
-                    if (lastAction.from === 'waste') {
-                        cardEl.style.position = 'relative';
-                        cardEl.style.top = '0px';
-                        cardEl.style.left = '0px';
-                    } else if (lastAction.from.startsWith('fnd-')) {
-                        cardEl.style.position = 'absolute';
-                        cardEl.style.top = '0px';
-                        cardEl.style.left = '0px';
-                    } else {
-                        cardEl.style.position = 'absolute';
-                        cardEl.style.top = ((fromEl.children.length - 1) * 25) + 'px';
-                        cardEl.style.left = '0px';
-                    }
+                    lastAction.cardIds.forEach(id => {
+                        const cardEl = document.getElementById(id);
+                        fromEl.appendChild(cardEl);
+                        
+                        if (lastAction.from === 'waste') {
+                            cardEl.style.position = 'relative';
+                            cardEl.style.top = '0px';
+                            cardEl.style.left = '0px';
+                        } else if (lastAction.from.startsWith('fnd-')) {
+                            cardEl.style.position = 'absolute';
+                            cardEl.style.top = '0px';
+                            cardEl.style.left = '0px';
+                        } else {
+                            cardEl.style.position = 'absolute';
+                            cardEl.style.top = ((fromEl.children.length - 1) * 25) + 'px';
+                            cardEl.style.left = '0px';
+                        }
+                    });
                 }
             }
         } else {
