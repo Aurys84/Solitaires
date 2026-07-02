@@ -10,7 +10,6 @@
         .slot { width: 70px; height: 100px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 5px; display: flex; align-items: center; justify-content: center; position: relative; }
         .column { width: 80px; position: relative; min-height: 400px; }
         
-        /* Modern kártya design sarokjelzőkkel */
         .card { 
             width: 70px; height: 100px; background: white; color: black; border-radius: 5px;
             position: absolute; border: 1px solid #000; display: flex; flex-direction: column; 
@@ -29,12 +28,12 @@
 </head>
 <body>
     <div id="top">
-        <div class="slot" id="stock" onclick="draw()">PAKLI</div>
+        <div class="slot" id="stock" onclick="handleStockClick()">PAKLI</div>
         <div class="slot" id="waste"></div>
-        <div class="slot" id="fnd-0" ondragover="event.preventDefault()" ondrop="handleFoundationDrop(event, this)"></div>
-        <div class="slot" id="fnd-1" ondragover="event.preventDefault()" ondrop="handleFoundationDrop(event, this)"></div>
+        <div class="slot" id="fnd-0" ondragover="event.preventDefault()" ondrop="dropOnFoundation(event, 0)"></div>
+        <div class="slot" id="fnd-1" ondragover="event.preventDefault()" ondrop="dropOnFoundation(event, 1)"></div>
         <div class="slot" id="fnd-2" ondragover="event.preventDefault()" ondrop="handleFoundationDrop(event, this)"></div>
-        <div class="slot" id="fnd-3" ondragover="event.preventDefault()" ondrop="handleFoundationDrop(event, this)"></div>
+        <div class="slot" id="fnd-3" ondragover="event.preventDefault()" ondrop="dropOnFoundation(event, 3)"></div>
     </div>
     <div id="table"></div>
     <div style="margin-top:20px;">
@@ -42,364 +41,303 @@
         <button onclick="undo()">VISSZA</button>
     </div>
 <script>
-    let deck = [];
+    // --- ADATALAPÚ GLOBÁLIS ÁLLAPOT (STATE) ---
+    let stock = [];
+    let waste = [];
+    let foundations = [[], [], [], []];
+    let columns = [[], [], [], [], [], [], []];
     let history = []; 
-    let cardCounter = 0; // ÚJ: Globális számláló, ami garantálja, hogy minden kártya ID-ja abszolút egyedi az univerzumban
-    const suits = ['♠', '♥', '♣', '♦'], vals = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+
+    const suits = ['♠', '♥', '♣', '♦'];
+    const vals = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 
     function init() {
-        const table = document.getElementById('table');
-        table.innerHTML = '';
-        document.getElementById('waste').innerHTML = '';
-        for(let i=0; i<4; i++) {
-            document.getElementById('fnd-'+i).innerHTML = '';
-        }
+        stock = [];
+        waste = [];
+        foundations = [[], [], [], []];
+        columns = [[], [], [], [], [], [], []];
+        history = [];
 
-        deck = [];
-        history = []; 
-        cardCounter++; // Minden új játéknál léptetjük a számlálót
-
-        // Tiszta, szigorúan zárt 52 lapos struktúra generálása
+        // 1. Tiszta, garantáltan 52 darab egyedi kártya létrehozása a memóriában
+        let fullDeck = [];
         for (let s of suits) {
             for (let v of vals) {
-                deck.push({ 
-                    s: s, 
-                    v: v, 
-                    id: 'c-' + cardCounter + '-' + s + '-' + v 
-                });
+                fullDeck.push({ s: s, v: v, faceUp: false });
             }
         }
-        
-        // Fisher-Yates keverés
-        for (let i = deck.length - 1; i > 0; i--) {
+
+        // 2. Fisher-Yates keverés a tiszta memóriatömbön
+        for (let i = fullDeck.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [deck[i], deck[j]] = [deck[j], deck[i]];
+            [fullDeck[i], fullDeck[j]] = [fullDeck[j], fullDeck[i]];
         }
-        
-        // Tábla felépítése
+
+        // 3. Tábla feltöltése az adatok szintjén
         for (let i = 0; i < 7; i++) {
-            const col = document.createElement('div');
-            col.className = 'column';
-            col.id = 'col-' + i;
-            col.ondragover = e => e.preventDefault();
-            col.ondrop = e => {
-                e.preventDefault();
-                const id = e.dataTransfer.getData("text");
-                const cardEl = document.getElementById(id);
-                if (!cardEl) return;
-                
-                const fromEl = cardEl.parentElement;
-                const fromId = fromEl.id;
-                
-                const cardSuit = cardEl.getAttribute('data-suit');
-                const cardVal = cardEl.getAttribute('data-val');
-                const cardRank = vals.indexOf(cardVal);
-                const cardIsRed = ['♥', '♦'].includes(cardSuit);
-
-                let canDrop = false;
-
-                if (col.children.length === 0) {
-                    if (cardRank === 12) { 
-                        canDrop = true;
-                    }
-                } else {
-                    const topCard = col.lastChild;
-                    const topSuit = topCard.getAttribute('data-suit');
-                    const topVal = topCard.getAttribute('data-val');
-                    const topRank = vals.indexOf(topVal);
-                    const topIsRed = ['♥', '♦'].includes(topSuit);
-
-                    if (cardIsRed !== topIsRed && cardRank === topRank - 1) {
-                        canDrop = true;
-                    }
-                }
-
-                if (!canDrop) {
-                    alert("Ide csak ellentétes színű és eggyel kisebb lapot tehetsz! Üres helyre csak Király rakható.");
-                    return;
-                }
-
-                const cardsToMove = [];
-                const children = Array.from(fromEl.children);
-                const startIndex = children.indexOf(cardEl);
-                
-                for (let k = startIndex; k < children.length; k++) {
-                    cardsToMove.push(children[k]);
-                }
-
-                let revealedCardId = null;
-                if (fromEl && fromEl.className === 'column' && startIndex > 0) {
-                    const subTop = fromEl.children[startIndex - 1];
-                    if (subTop && subTop.classList.contains('back')) {
-                        revealedCardId = subTop.id;
-                    }
-                }
-
-                history.push({
-                    type: 'move_group',
-                    cardIds: cardsToMove.map(c => c.id),
-                    from: fromId,
-                    to: col.id,
-                    wasRevealed: revealedCardId
-                });
-
-                cardsToMove.forEach(c => {
-                    col.appendChild(c);
-                    c.style.position = 'absolute';
-                    c.style.top = ((col.children.length - 1) * 25) + 'px';
-                    c.style.left = '0px';
-                });
-
-                if (fromId.startsWith('col-')) {
-                    revealTopCard(fromEl);
-                }
-            };
-            
             for (let j = 0; j <= i; j++) {
-                const c = deck.pop();
-                const el = createCardEl(c, j === i);
-                el.style.top = (j * 25) + 'px';
-                col.appendChild(el);
+                let card = fullDeck.pop();
+                if (j === i) card.faceUp = true; // Legfelső lap felfordítása
+                columns[i].push(card);
             }
-            table.appendChild(col);
+        }
+
+        // A maradék kártya megy a húzópakliba
+        stock = fullDeck;
+
+        // 4. Teljes UI kirajzolása az adatok alapján
+        render();
+    }
+
+    // A VÉGSŐ FEGYVER: Ez a függvény töröl mindent és kizárólag az aktuális tömbállapotot rajzolja ki!
+    function render() {
+        // Tábla ürítése és újraépítése
+        const tableEl = document.getElementById('table');
+        tableEl.innerHTML = '';
+
+        for (let i = 0; i < 7; i++) {
+            const colEl = document.createElement('div');
+            colEl.className = 'column';
+            colEl.id = 'col-' + i;
+            colEl.ondragover = e => e.preventDefault();
+            colEl.ondrop = e => dropOnColumn(e, i);
+
+            columns[i].forEach((card, j) => {
+                const cardEl = createCardElement(card, 'col', i, j);
+                cardEl.style.top = (j * 25) + 'px';
+                colEl.appendChild(cardEl);
+            });
+            tableEl.appendChild(colEl);
+        }
+
+        // Dobópakli frissítése
+        const wasteEl = document.getElementById('waste');
+        wasteEl.innerHTML = '';
+        if (waste.length > 0) {
+            const topWasteCard = waste[waste.length - 1];
+            const cardEl = createCardElement(topWasteCard, 'waste', 0, waste.length - 1);
+            cardEl.style.position = 'relative';
+            wasteEl.appendChild(cardEl);
+        }
+
+        // Gyűjtők frissítése
+        for (let i = 0; i < 4; i++) {
+            const fndEl = document.getElementById('fnd-' + i);
+            fndEl.innerHTML = '';
+            if (foundations[i].length > 0) {
+                const topFndCard = foundations[i][foundations[i].length - 1];
+                const cardEl = createCardElement(topFndCard, 'fnd', i, foundations[i].length - 1);
+                fndEl.appendChild(cardEl);
+            }
+        }
+
+        // Pakli felirat kezelése
+        const stockEl = document.getElementById('stock');
+        if (stock.length === 0) {
+            stockEl.innerHTML = 'RECYCLE';
+            stockEl.style.background = 'rgba(255,255,255,0.2)';
+        } else {
+            stockEl.innerHTML = 'PAKLI';
+            stockEl.style.background = '';
         }
     }
 
-    function fromInColumnIndex(col, card) {
-        return Array.from(col.children).indexOf(card);
-    }
-
-    function createCardEl(c, faceUp) {
+    function createCardElement(card, sourceZone, zoneIndex, cardIndex) {
         const el = document.createElement('div');
-        el.id = c.id;
-        el.setAttribute('data-suit', c.s);
-        el.setAttribute('data-val', c.v);
-        el.className = 'card' + (faceUp ? '' : ' back') + (faceUp && ['♥', '♦'].includes(c.s) ? ' red' : '');
+        el.className = 'card' + (card.faceUp ? '' : ' back') + (card.faceUp && ['♥', '♦'].includes(card.s) ? ' red' : '');
         
-        if (faceUp) {
+        if (card.faceUp) {
             el.innerHTML = `
-                <div class="card-top">${c.v}<br>${c.s}</div>
-                <div class="card-center">${c.s}</div>
-                <div class="card-bottom">${c.v}<br>${c.s}</div>
+                <div class="card-top">${card.v}<br>${card.s}</div>
+                <div class="card-center">${card.s}</div>
+                <div class="card-bottom">${card.v}<br>${card.s}</div>
             `;
             el.draggable = true;
-            el.ondragstart = e => e.dataTransfer.setData("text", el.id);
-        } else {
-            el.innerHTML = '';
+            el.ondragstart = e => {
+                e.dataTransfer.setData("text/plain", JSON.stringify({
+                    sourceZone: sourceZone,
+                    zoneIndex: zoneIndex,
+                    cardIndex: cardIndex
+                }));
+            };
         }
         return el;
     }
 
-    function handleFoundationDrop(e, slot) {
+    function handleStockClick() {
+        // Állapot mentése az undo-hoz
+        saveState();
+
+        if (stock.length > 0) {
+            let card = stock.pop();
+            card.faceUp = true;
+            waste.push(card);
+        } else {
+            // Újraforgatás logikája adatszinten
+            if (waste.length > 0) {
+                stock = [...waste].reverse();
+                stock.forEach(c => c.faceUp = false);
+                waste = [];
+            } else {
+                alert("Minden lap elfogyott a pakliból!");
+                history.pop(); // Nem történt akció, töröljük a mentést
+            }
+        }
+        render();
+    }
+
+    function dropOnColumn(e, targetColIndex) {
         e.preventDefault();
-        const id = e.dataTransfer.getData("text");
-        const cardEl = document.getElementById(id);
-        if (!cardEl) return;
+        const data = JSON.parse(e.dataTransfer.getData("text/plain"));
+        
+        // Megkeressük a mozgatni kívánt kártyákat az adatokból
+        let sourceCards = [];
+        if (data.sourceZone === 'col') {
+            sourceCards = columns[data.zoneIndex].slice(data.cardIndex);
+        } else if (data.sourceZone === 'waste') {
+            sourceCards = [waste[waste.length - 1]];
+        } else if (data.sourceZone === 'fnd') {
+            sourceCards = [foundations[data.zoneIndex][foundations[data.zoneIndex].length - 1]];
+        }
 
-        const fromEl = cardEl.parentElement;
-        const fromId = fromEl.id;
+        if (sourceCards.length === 0) return;
+        let movingCard = sourceCards[0];
 
-        if (cardEl !== fromEl.lastChild) {
-            alert("A gyűjtőbe csak a legfelső lapot teheted át!");
+        // --- SZIGORÚ SZABÁLYELLENŐRZÉS ---
+        let targetCol = columns[targetColIndex];
+        let canDrop = false;
+        let movingRank = vals.indexOf(movingCard.v);
+
+        if (targetCol.length === 0) {
+            if (movingRank === 12) canDrop = true; // Üres helyre csak Király
+        } else {
+            let topCard = targetCol[targetCol.length - 1];
+            let movingIsRed = ['♥', '♦'].includes(movingCard.s);
+            let topIsRed = ['♥', '♦'].includes(topCard.s);
+            let topRank = vals.indexOf(topCard.v);
+
+            if (movingIsRed !== topIsRed && movingRank === topRank - 1) {
+                canDrop = true; // Ellentétes szín és eggyel kisebb rang
+            }
+        }
+
+        if (!canDrop) {
+            alert("Szabálytalan lépés! Ide csak váltott színű és eggyel kisebb lap rakható.");
             return;
         }
 
-        const cardSuit = cardEl.getAttribute('data-suit');
-        const cardVal = cardEl.getAttribute('data-val');
-        const cardRank = vals.indexOf(cardVal);
+        // Ha a szabályok stimmelnek, végrehajtjuk a mozgást az adatok szintjén
+        saveState();
 
-        let canMove = false;
-
-        if (slot.children.length === 0) {
-            if (cardRank === 0) {
-                canMove = true;
+        // Törlés a forrásból
+        if (data.sourceZone === 'col') {
+            columns[data.zoneIndex].splice(data.cardIndex);
+            // Ha maradt kártya az oszlopban, a legfelsőt felfordítjuk
+            if (columns[data.zoneIndex].length > 0) {
+                columns[data.zoneIndex][columns[data.zoneIndex].length - 1].faceUp = true;
             }
-        } else {
-            const topCard = slot.lastChild;
-            const topSuit = topCard.getAttribute('data-suit');
-            const topVal = topCard.getAttribute('data-val');
-            const topRank = vals.indexOf(topVal);
+        } else if (data.sourceZone === 'waste') {
+            waste.pop();
+        } else if (data.sourceZone === 'fnd') {
+            foundations[data.zoneIndex].pop();
+        }
 
-            if (cardSuit === topSuit && cardRank === topRank + 1) {
-                canMove = true;
+        // Hozzáadás a célhoz
+        columns[targetColIndex] = columns[targetColIndex].concat(sourceCards);
+        render();
+    }
+
+    function dropOnFoundation(e, targetFndIndex) {
+        e.preventDefault();
+        const data = JSON.parse(e.dataTransfer.getData("text/plain"));
+        
+        let movingCard = null;
+        if (data.sourceZone === 'col') {
+            // Gyűjtőbe csak egyetlen lapot rakhatunk, az oszlop legutolsóját!
+            if (data.cardIndex !== columns[data.zoneIndex].length - 1) {
+                alert("Csoportos kártyasort nem rakhatsz a gyűjtőbe!");
+                return;
+            }
+            movingCard = columns[data.zoneIndex][data.cardIndex];
+        } else if (data.sourceZone === 'waste') {
+            movingCard = waste[waste.length - 1];
+        } else if (data.sourceZone === 'fnd') {
+            movingCard = foundations[data.zoneIndex][foundations[data.zoneIndex].length - 1];
+        }
+
+        if (!movingCard) return;
+
+        // --- ALAPOK SZIGORÚ SZABÁLYA ---
+        let targetFnd = foundations[targetFndIndex];
+        let canDrop = false;
+        let movingRank = vals.indexOf(movingCard.v);
+
+        if (targetFnd.length === 0) {
+            if (movingRank === 0) canDrop = true; // Csak Ász kezdhet alaphelyet
+        } else {
+            let topCard = targetFnd[targetFnd.length - 1];
+            let topRank = vals.indexOf(topCard.v);
+            if (movingCard.s === topCard.s && movingRank === topRank + 1) {
+                canDrop = true; // Azonos szín és növekvő sorrend
             }
         }
 
-        if (canMove) {
-            let revealedCardId = null;
-            if (fromEl && fromEl.className === 'column' && fromEl.children.length > 1) {
-                const subTop = fromEl.children[fromInColumnIndex(fromEl, cardEl) - 1];
-                if (subTop && subTop.classList.contains('back')) {
-                    revealedCardId = subTop.id;
-                }
-            }
-
-            history.push({
-                type: 'move_group',
-                cardIds: [id],
-                from: fromId,
-                to: slot.id,
-                wasRevealed: revealedCardId
-            });
-
-            slot.appendChild(cardEl);
-            cardEl.style.position = 'absolute';
-            cardEl.style.top = '0px';
-            cardEl.style.left = '0px';
-
-            if (fromId.startsWith('col-')) {
-                revealTopCard(fromEl);
-            }
-            
-            checkWinCondition();
-        } else {
-            alert("Ide csak azonos színű és eggyel nagyobb lapot tehestz, az alap pedig az Ász!");
+        if (!canDrop) {
+            alert("A gyűjtőbe csak azonos színű és eggyel nagyobb lapot tehetsz, az alap az Ász!");
+            return;
         }
+
+        saveState();
+
+        // Törlés a forrásból
+        if (data.sourceZone === 'col') {
+            columns[data.zoneIndex].pop();
+            if (columns[data.zoneIndex].length > 0) {
+                columns[data.zoneIndex][columns[data.zoneIndex].length - 1].faceUp = true;
+            }
+        } else if (data.sourceZone === 'waste') {
+            waste.pop();
+        } else if (data.sourceZone === 'fnd') {
+            foundations[data.zoneIndex].pop();
+        }
+
+        // Hozzáadás a gyűjtőhöz
+        foundations[targetFndIndex].push(movingCard);
+        render();
+        checkWinCondition();
+    }
+
+    // Szuper-kompatibilitási réteg a régi HTML ondrop hívásodhoz a harmadik alapkeretnél
+    function handleFoundationDrop(e, slot) {
+        dropOnFoundation(e, 2);
     }
 
     function checkWinCondition() {
-        let totalCardsInFoundations = 0;
-        for (let i = 0; i < 4; i++) {
-            totalCardsInFoundations += document.getElementById('fnd-' + i).children.length;
-        }
-        if (totalCardsInFoundations === 52) {
+        let total = foundations.reduce((sum, fnd) => sum + fnd.length, 0);
+        if (total === 52) {
             setTimeout(() => {
                 alert("GRATULÁLOK, NYERTÉL! 🎉 Minden kártyát sikeresen elrendeztél a Mátrixban!");
             }, 300);
         }
     }
 
-    function revealTopCard(colEl) {
-        if (colEl && colEl.children.length > 0) {
-            const topCard = colEl.lastChild;
-            if (topCard.classList.contains('back')) {
-                topCard.classList.remove('back');
-                const suit = topCard.getAttribute('data-suit');
-                const val = topCard.getAttribute('data-val');
-                
-                if (['♥', '♦'].includes(suit)) {
-                    topCard.classList.add('red');
-                }
-                topCard.innerHTML = `
-                    <div class="card-top">${val}<br>${suit}</div>
-                    <div class="card-center">${suit}</div>
-                    <div class="card-bottom">${val}<br>${suit}</div>
-                `;
-                topCard.draggable = true;
-                topCard.ondragstart = e => e.dataTransfer.setData("text", topCard.id);
-            }
-        }
+    // ATOMBIZTOS UNDO: Lementi a teljes játékállapot mély másolatát JSON formátumban
+    function saveState() {
+        history.push(JSON.stringify({
+            stock: stock,
+            waste: waste,
+            foundations: foundations,
+            columns: columns
+        }));
     }
 
-    function hideCard(cardEl) {
-        if (cardEl) {
-            cardEl.classList.add('back');
-            cardEl.classList.remove('red');
-            cardEl.innerHTML = '';
-            cardEl.draggable = false;
-            cardEl.ondragstart = null;
-        }
-    }
-
-    function draw() {
-        if (deck.length > 0) {
-            const c = deck.pop();
-            history.push({
-                type: 'draw',
-                card: c
-            }); 
-            updateWasteUI();
-        } 
-        else {
-            const draws = history.filter(h => h.type === 'draw');
-            if (draws.length > 0) {
-                const recycledCards = draws.map(h => h.card);
-                deck = recycledCards.reverse();
-                
-                history = history.filter(h => h.type !== 'draw');
-                history.push({
-                    type: 'recycle',
-                    cards: recycledCards
-                });
-                
-                updateWasteUI();
-                console.log("Pakli újraforgatva!");
-            } else {
-                alert("A teljes pakli elfogyott, nincs mit újraforgatni!");
-            }
-        }
-    }
-
-    function updateWasteUI() {
-        const waste = document.getElementById('waste');
-        waste.innerHTML = '';
-        const draws = history.filter(h => h.type === 'draw');
-        if (draws.length > 0) {
-            const c = draws[draws.length - 1].card;
-            const cardEl = document.createElement('div');
-            cardEl.id = c.id;
-            cardEl.setAttribute('data-suit', c.s);
-            cardEl.setAttribute('data-val', c.v);
-            cardEl.className = 'card' + (['♥', '♦'].includes(c.s) ? ' red' : '');
-            cardEl.style.position = 'relative';
-            cardEl.style.top = '0px';
-            cardEl.innerHTML = `
-                <div class="card-top">${c.v}<br>${c.s}</div>
-                <div class="card-center">${c.s}</div>
-                <div class="card-bottom">${c.v}<br>${c.s}</div>
-            `;
-            cardEl.draggable = true;
-            cardEl.ondragstart = e => e.dataTransfer.setData("text", cardEl.id);
-            waste.appendChild(cardEl);
-        }
-    }
-    
     function undo() {
         if (history.length > 0) {
-            const lastAction = history.pop();
-            
-            if (lastAction.type === 'draw') {
-                deck.push(lastAction.card);
-                updateWasteUI();
-            } 
-            else if (lastAction.type === 'recycle') {
-                deck = [];
-                const originalCards = [...lastAction.cards].reverse();
-                originalCards.forEach(c => {
-                    history.push({
-                        type: 'draw',
-                        card: c
-                    });
-                });
-                updateWasteUI();
-            }
-            else if (lastAction.type === 'move_group') {
-                if (lastAction.wasRevealed) {
-                    hideCard(document.getElementById(lastAction.wasRevealed));
-                }
-
-                const fromEl = document.getElementById(lastAction.from);
-                if (fromEl) {
-                    lastAction.cardIds.forEach(id => {
-                        const cardEl = document.getElementById(id);
-                        fromEl.appendChild(cardEl);
-                        
-                        if (lastAction.from === 'waste') {
-                            cardEl.style.position = 'relative';
-                            cardEl.style.top = '0px';
-                            cardEl.style.left = '0px';
-                        } else if (lastAction.from.startsWith('fnd-')) {
-                            cardEl.style.position = 'absolute';
-                            cardEl.style.top = '0px';
-                            cardEl.style.left = '0px';
-                        } else {
-                            cardEl.style.position = 'absolute';
-                            cardEl.style.top = ((fromEl.children.length - 1) * 25) + 'px';
-                            cardEl.style.left = '0px';
-                        }
-                    });
-                }
-            }
+            let previousState = JSON.parse(history.pop());
+            stock = previousState.stock;
+            waste = previousState.waste;
+            foundations = previousState.foundations;
+            columns = previousState.columns;
+            render();
         } else {
             console.log("Nincs több visszavonható lépés.");
         }
