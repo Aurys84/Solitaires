@@ -10,7 +10,7 @@
         .slot { width: 70px; height: 100px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 5px; display: flex; align-items: center; justify-content: center; position: relative; }
         .column { width: 80px; position: relative; min-height: 400px; }
         
-        /* JAVÍTVA: Modern kártya design sarokjelzőkkel */
+        /* Modern kártya design sarokjelzőkkel */
         .card { 
             width: 70px; height: 100px; background: white; color: black; border-radius: 5px;
             position: absolute; border: 1px solid #000; display: flex; flex-direction: column; 
@@ -47,10 +47,23 @@
     const suits = ['♠', '♥', '♣', '♦'], vals = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 
     function init() {
+        // JAVÍTVA: Mindig teljesen üres tömbből építjük újra a tiszta 52 lapos paklit
         deck = [];
         history = []; 
-        suits.forEach(s => vals.forEach(v => deck.push({s, v, id: Math.random().toString(36).substr(2, 9)})));
+        
+        suits.forEach(s => {
+            vals.forEach(v => {
+                deck.push({
+                    s: s, 
+                    v: v, 
+                    id: 'card-' + s + '-' + v // JAVÍTVA: Az ID most már szigorúan leírja a lapot, így kizárt a duplikáció
+                });
+            });
+        });
+        
+        // Biztonságos keverés
         deck.sort(() => Math.random() - 0.5);
+        
         const table = document.getElementById('table');
         table.innerHTML = '';
         
@@ -68,7 +81,7 @@
                 const fromId = cardEl.parentElement.id;
                 const fromEl = cardEl.parentElement;
                 
-                // --- ÚJ: TÁBLA PASZIÁNSZ SZABÁLYELLENŐRZÉS ---
+                // --- TÁBLA PASZIÁNSZ SZABÁLYELLENŐRZÉS ---
                 const cardSuit = cardEl.getAttribute('data-suit');
                 const cardVal = cardEl.getAttribute('data-val');
                 const cardRank = vals.indexOf(cardVal);
@@ -76,20 +89,17 @@
 
                 let canDrop = false;
 
-                // Ha az oszlop üres, CSAK KIRÁLYT (K = Rank 12) szabad letenni
                 if (col.children.length === 0) {
                     if (cardRank === 12) {
                         canDrop = true;
                     }
                 } else {
-                    // Ha van már lent lap, ellenőrizzük a legfelsőt
                     const topCard = col.lastChild;
                     const topSuit = topCard.getAttribute('data-suit');
                     const topVal = topCard.getAttribute('data-val');
                     const topRank = vals.indexOf(topVal);
                     const topIsRed = ['♥', '♦'].includes(topSuit);
 
-                    // Feltétel: ellentétes szín ÉS pontosan eggyel kisebb érték
                     if (cardIsRed !== topIsRed && cardRank === topRank - 1) {
                         canDrop = true;
                     }
@@ -99,7 +109,6 @@
                     alert("Ide csak ellentétes színű és eggyel kisebb lapot tehetsz! Üres helyre csak Király rakható.");
                     return;
                 }
-                // --------------------------------------------
 
                 let revealedCardId = null;
                 if (fromEl && fromEl.className === 'column' && fromEl.children.length > 1) {
@@ -126,6 +135,7 @@
                     revealTopCard(fromEl);
                 }
             };
+            
             for (let j = 0; j <= i; j++) {
                 const c = deck.pop();
                 const el = createCardEl(c, j === i);
@@ -218,8 +228,25 @@
             if (fromId.startsWith('col-')) {
                 revealTopCard(fromEl);
             }
+            
+            // --- ÚJ: GYŐZELEM ELLENŐRZÉSE ---
+            checkWinCondition();
+            
         } else {
             alert("Ide csak azonos színű és eggyel nagyobb lapot tehetsz, az alap pedig az Ász!");
+        }
+    }
+
+    // ÚJ: Ellenőrizzük, hogy mind az 52 lap a helyén van-e a fenti alapokon
+    function checkWinCondition() {
+        let totalCardsInFoundations = 0;
+        for (let i = 0; i < 4; i++) {
+            totalCardsInFoundations += document.getElementById('fnd-' + i).children.length;
+        }
+        if (totalCardsInFoundations === 52) {
+            setTimeout(() => {
+                alert("GRATULÁLOK, NYERTÉL! 🎉 Minden kártyát sikeresen elrendeztél a Mátrixban!");
+            }, 300);
         }
     }
 
