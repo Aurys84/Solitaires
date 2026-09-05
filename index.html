@@ -2,7 +2,7 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <title>Nefi Solitaire - Szuper-Profi Motor</title>
+    <title>Nefi Solitaire - Végleges Profi</title>
     <style>
         body { background: #0b3d0b; color: white; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; align-items: center; }
         #top { display: flex; gap: 15px; margin-top: 20px; }
@@ -29,7 +29,7 @@
 <body>
     <div id="top">
         <div class="slot" id="stock" onclick="handleStockClick()">PAKLI</div>
-        <div class="slot" id="waste" ondblclick="tryAutoMoveWaste()"></div>
+        <div class="slot" id="waste"></div>
         <div class="slot" id="fnd-0" ondragover="event.preventDefault()" ondrop="dropOnFoundation(event, 0)"></div>
         <div class="slot" id="fnd-1" ondragover="event.preventDefault()" ondrop="dropOnFoundation(event, 1)"></div>
         <div class="slot" id="fnd-2" ondragover="event.preventDefault()" ondrop="dropOnFoundation(event, 2)"></div>
@@ -106,6 +106,13 @@
             const topWasteCard = waste[waste.length - 1];
             const cardEl = createCardElement(topWasteCard, 'waste', 0, waste.length - 1);
             cardEl.style.position = 'relative';
+            
+            // ITT A LÉNYEG: A dobott lapra közvetlenül rákötjük a dupla kattintást!
+            cardEl.ondblclick = e => {
+                e.stopPropagation();
+                tryAutoMoveWaste();
+            };
+
             wasteEl.appendChild(cardEl);
         }
 
@@ -149,10 +156,12 @@
                 }));
             };
 
-            el.ondblclick = e => {
-                e.stopPropagation();
-                tryAutoMoveToFoundation(sourceZone, zoneIndex, cardIndex);
-            };
+            if (sourceZone === 'col') {
+                el.ondblclick = e => {
+                    e.stopPropagation();
+                    tryAutoMoveToFoundation(sourceZone, zoneIndex, cardIndex);
+                };
+            }
         }
         return el;
     }
@@ -167,15 +176,9 @@
     }
 
     function tryAutoMoveToFoundation(sourceZone, zoneIndex, cardIndex) {
-        let movingCard = null;
-        if (sourceZone === 'col') {
-            if (cardIndex !== columns[zoneIndex].length - 1) return;
-            movingCard = columns[zoneIndex][cardIndex];
-        } else if (sourceZone === 'waste') {
-            movingCard = waste[waste.length - 1];
-        } else {
-            return;
-        }
+        if (sourceZone !== 'col') return;
+        if (cardIndex !== columns[zoneIndex].length - 1) return;
+        let movingCard = columns[zoneIndex][cardIndex];
 
         if (!movingCard) return;
 
