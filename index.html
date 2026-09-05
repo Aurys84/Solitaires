@@ -2,12 +2,12 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <title>Nefi Solitaire - Kattintós Motor</title>
+    <title>Nefi Solitaire - Profi Motor</title>
     <style>
         body { background: #0b3d0b; color: white; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; align-items: center; }
         #top { display: flex; gap: 15px; margin-top: 20px; }
         #table { display: flex; gap: 10px; margin-top: 20px; }
-        .slot { width: 70px; height: 100px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 5px; display: flex; align-items: center; justify-content: center; position: relative; }
+        .slot { width: 70px; height: 100px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 5px; display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer; }
         .column { width: 80px; position: relative; min-height: 400px; }
         
         .card { 
@@ -29,7 +29,7 @@
 <body>
     <div id="top">
         <div class="slot" id="stock" onclick="handleStockClick()">PAKLI</div>
-        <div class="slot" id="waste"></div>
+        <div class="slot" id="waste" ondblclick="tryAutoMoveWaste()"></div>
         <div class="slot" id="fnd-0" ondragover="event.preventDefault()" ondrop="dropOnFoundation(event, 0)"></div>
         <div class="slot" id="fnd-1" ondragover="event.preventDefault()" ondrop="dropOnFoundation(event, 1)"></div>
         <div class="slot" id="fnd-2" ondragover="event.preventDefault()" ondrop="dropOnFoundation(event, 2)"></div>
@@ -39,6 +39,7 @@
     <div style="margin-top:20px;">
         <button onclick="init()">ÚJ LEOSZTÁS</button>
         <button onclick="undo()">VISSZA</button>
+        <button onclick="autoFinish()">🤖 AUTOMATA KIRAKÁS</button>
     </div>
 <script>
     let stock = [];
@@ -140,7 +141,6 @@
             `;
             el.draggable = true;
             
-            // Húzás esemény
             el.ondragstart = e => {
                 e.dataTransfer.setData("text/plain", JSON.stringify({
                     sourceZone: sourceZone,
@@ -149,7 +149,7 @@
                 }));
             };
 
-            // DUPLA KATTINTÁS / KOPPINTÁS FUNKCIÓ AZ ALAPOKHOZ UGRÁSHOZ
+            // Dupla kattintás bárilyen kártyára (oszlopok teteje)
             el.ondblclick = e => {
                 e.stopPropagation();
                 tryAutoMoveToFoundation(sourceZone, zoneIndex, cardIndex);
@@ -158,13 +158,20 @@
         return el;
     }
 
-    // Automatikus pakolás az alapokba dupla kattintásra
+    // Dobott lap dupla kattintásos kezelése
+    function tryAutoMoveWaste() {
+        if (waste.length === 0) return;
+        let movingCard = waste[waste.length - 1];
+        if (tryMoveCardToAnyFoundation(movingCard, 'waste', 0)) {
+            render();
+            checkWinCondition();
+        }
+    }
+
     function tryAutoMoveToFoundation(sourceZone, zoneIndex, cardIndex) {
         let movingCard = null;
-
-        // Csak a legfelső kártyát lehet automatikusan felküldeni
         if (sourceZone === 'col') {
-            if (cardIndex !== columns[zoneIndex].length - 1) return; // Nem a legfelső
+            if (cardIndex !== columns[zoneIndex].length - 1) return;
             movingCard = columns[zoneIndex][cardIndex];
         } else if (sourceZone === 'waste') {
             movingCard = waste[waste.length - 1];
@@ -174,32 +181,33 @@
 
         if (!movingCard) return;
 
-        // Megkeressük, melyik alapba illik bele
+        if (tryMoveCardToAnyFoundation(movingCard, sourceZone, zoneIndex)) {
+            render();
+            checkWinCondition();
+        }
+    }
+
+    function tryMoveCardToAnyFoundation(movingCard, sourceZone, zoneIndex) {
         let targetFndIndex = -1;
+        let movingRank = vals.indexOf(movingCard.v);
+
         for (let i = 0; i < 4; i++) {
             let fnd = foundations[i];
-            let movingRank = vals.indexOf(movingCard.v);
-
             if (fnd.length === 0) {
-                if (movingRank === 0) { // Ász
-                    targetFndIndex = i;
-                    break;
-                }
+                if (movingRank === 0) { targetFndIndex = i; break; }
             } else {
                 let topCard = fnd[fnd.length - 1];
                 let topRank = vals.indexOf(topCard.v);
                 if (movingCard.s === topCard.s && movingRank === topRank + 1) {
-                    targetFndIndex = i;
-                    break;
+                    targetFndIndex = i; break;
                 }
             }
         }
 
-        if (targetFndIndex === -1) return; // Nincs hova tenni
+        if (targetFndIndex === -1) return false;
 
         saveState();
 
-        // Levétel a forrásból
         if (sourceZone === 'col') {
             columns[zoneIndex].pop();
             if (columns[zoneIndex].length > 0) {
@@ -209,8 +217,44 @@
             waste.pop();
         }
 
-        // Beillesztés az alapba
         foundations[targetFndIndex].push(movingCard);
+        return true;
+    }
+
+    // Automata végjáték gomb: ha minden lefelé néző lap már fent van, egy gombnyomással pakolja fel a maradékot!
+    function autoFinish() {
+        let hiddenCardsExist = columns.some(col => col.some(c => !c.faceUp));
+        if (hiddenCardsExist) {
+            alert("Még vannek rejtett lapok a táblán! Fordítsd fel őket előbb.");
+            return;
+        }
+
+        saveState();
+        let moved = true;
+        let loops = 0;
+        while (moved && loops < 100) {
+            moved = false;
+            loops++;
+
+            // Dobott lap tesztelése
+            if (waste.length > 0) {
+                if (tryMoveCardToAnyFoundation(waste[waste.length - 1], 'waste', 0)) {
+                    moved = true;
+                    continue;
+                }
+            }
+
+            // Oszlopok tetejének tesztelése
+            for (let i = 0; i < 7; i++) {
+                if (columns[i].length > 0) {
+                    let topCard = columns[i][columns[i].length - 1];
+                    if (tryMoveCardToAnyFoundation(topCard, 'col', i)) {
+                        moved = true;
+                        break;
+                    }
+                }
+            }
+        }
         render();
         checkWinCondition();
     }
