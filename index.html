@@ -2,7 +2,7 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <title>Nefi Solitaire - Végleges Motor</title>
+    <title>Nefi Solitaire - Kattintós Motor</title>
     <style>
         body { background: #0b3d0b; color: white; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; align-items: center; }
         #top { display: flex; gap: 15px; margin-top: 20px; }
@@ -32,7 +32,7 @@
         <div class="slot" id="waste"></div>
         <div class="slot" id="fnd-0" ondragover="event.preventDefault()" ondrop="dropOnFoundation(event, 0)"></div>
         <div class="slot" id="fnd-1" ondragover="event.preventDefault()" ondrop="dropOnFoundation(event, 1)"></div>
-        <div class="slot" id="fnd-2" ondragover="event.preventDefault()" ondrop="handleFoundationDrop(event, this)"></div>
+        <div class="slot" id="fnd-2" ondragover="event.preventDefault()" ondrop="dropOnFoundation(event, 2)"></div>
         <div class="slot" id="fnd-3" ondragover="event.preventDefault()" ondrop="dropOnFoundation(event, 3)"></div>
     </div>
     <div id="table"></div>
@@ -41,7 +41,6 @@
         <button onclick="undo()">VISSZA</button>
     </div>
 <script>
-    // --- ADATALAPÚ GLOBÁLIS ÁLLAPOT (STATE) ---
     let stock = [];
     let waste = [];
     let foundations = [[], [], [], []];
@@ -58,7 +57,6 @@
         columns = [[], [], [], [], [], [], []];
         history = [];
 
-        // 1. Tiszta, garantáltan 52 darab egyedi kártya létrehozása a memóriában
         let fullDeck = [];
         for (let s of suits) {
             for (let v of vals) {
@@ -66,31 +64,23 @@
             }
         }
 
-        // 2. Fisher-Yates keverés a tiszta memóriatömbön
         for (let i = fullDeck.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [fullDeck[i], fullDeck[j]] = [fullDeck[j], fullDeck[i]];
         }
 
-        // 3. Tábla feltöltése az adatok szintjén
         for (let i = 0; i < 7; i++) {
             for (let j = 0; j <= i; j++) {
                 let card = fullDeck.pop();
-                if (j === i) card.faceUp = true; // Legfelső lap felfordítása
+                if (j === i) card.faceUp = true;
                 columns[i].push(card);
             }
         }
-
-        // A maradék kártya megy a húzópakliba
         stock = fullDeck;
-
-        // 4. Teljes UI kirajzolása az adatok alapján
         render();
     }
 
-    // A VÉGSŐ FEGYVER: Ez a függvény töröl mindent és kizárólag az aktuális tömbállapotot rajzolja ki!
     function render() {
-        // Tábla ürítése és újraépítése
         const tableEl = document.getElementById('table');
         tableEl.innerHTML = '';
 
@@ -109,7 +99,6 @@
             tableEl.appendChild(colEl);
         }
 
-        // Dobópakli frissítése
         const wasteEl = document.getElementById('waste');
         wasteEl.innerHTML = '';
         if (waste.length > 0) {
@@ -119,7 +108,6 @@
             wasteEl.appendChild(cardEl);
         }
 
-        // Gyűjtők frissítése
         for (let i = 0; i < 4; i++) {
             const fndEl = document.getElementById('fnd-' + i);
             fndEl.innerHTML = '';
@@ -130,7 +118,6 @@
             }
         }
 
-        // Pakli felirat kezelése
         const stockEl = document.getElementById('stock');
         if (stock.length === 0) {
             stockEl.innerHTML = 'RECYCLE';
@@ -152,6 +139,8 @@
                 <div class="card-bottom">${card.v}<br>${card.s}</div>
             `;
             el.draggable = true;
+            
+            // Húzás esemény
             el.ondragstart = e => {
                 e.dataTransfer.setData("text/plain", JSON.stringify({
                     sourceZone: sourceZone,
@@ -159,27 +148,87 @@
                     cardIndex: cardIndex
                 }));
             };
+
+            // DUPLA KATTINTÁS / KOPPINTÁS FUNKCIÓ AZ ALAPOKHOZ UGRÁSHOZ
+            el.ondblclick = e => {
+                e.stopPropagation();
+                tryAutoMoveToFoundation(sourceZone, zoneIndex, cardIndex);
+            };
         }
         return el;
     }
 
-    function handleStockClick() {
-        // Állapot mentése az undo-hoz
+    // Automatikus pakolás az alapokba dupla kattintásra
+    function tryAutoMoveToFoundation(sourceZone, zoneIndex, cardIndex) {
+        let movingCard = null;
+
+        // Csak a legfelső kártyát lehet automatikusan felküldeni
+        if (sourceZone === 'col') {
+            if (cardIndex !== columns[zoneIndex].length - 1) return; // Nem a legfelső
+            movingCard = columns[zoneIndex][cardIndex];
+        } else if (sourceZone === 'waste') {
+            movingCard = waste[waste.length - 1];
+        } else {
+            return;
+        }
+
+        if (!movingCard) return;
+
+        // Megkeressük, melyik alapba illik bele
+        let targetFndIndex = -1;
+        for (let i = 0; i < 4; i++) {
+            let fnd = foundations[i];
+            let movingRank = vals.indexOf(movingCard.v);
+
+            if (fnd.length === 0) {
+                if (movingRank === 0) { // Ász
+                    targetFndIndex = i;
+                    break;
+                }
+            } else {
+                let topCard = fnd[fnd.length - 1];
+                let topRank = vals.indexOf(topCard.v);
+                if (movingCard.s === topCard.s && movingRank === topRank + 1) {
+                    targetFndIndex = i;
+                    break;
+                }
+            }
+        }
+
+        if (targetFndIndex === -1) return; // Nincs hova tenni
+
         saveState();
 
+        // Levétel a forrásból
+        if (sourceZone === 'col') {
+            columns[zoneIndex].pop();
+            if (columns[zoneIndex].length > 0) {
+                columns[zoneIndex][columns[zoneIndex].length - 1].faceUp = true;
+            }
+        } else if (sourceZone === 'waste') {
+            waste.pop();
+        }
+
+        // Beillesztés az alapba
+        foundations[targetFndIndex].push(movingCard);
+        render();
+        checkWinCondition();
+    }
+
+    function handleStockClick() {
+        saveState();
         if (stock.length > 0) {
             let card = stock.pop();
             card.faceUp = true;
             waste.push(card);
         } else {
-            // Újraforgatás logikája adatszinten
             if (waste.length > 0) {
                 stock = [...waste].reverse();
                 stock.forEach(c => c.faceUp = false);
                 waste = [];
             } else {
                 alert("Minden lap elfogyott a pakliból!");
-                history.pop(); // Nem történt akció, töröljük a mentést
+                history.pop();
             }
         }
         render();
@@ -189,7 +238,6 @@
         e.preventDefault();
         const data = JSON.parse(e.dataTransfer.getData("text/plain"));
         
-        // Megkeressük a mozgatni kívánt kártyákat az adatokból
         let sourceCards = [];
         if (data.sourceZone === 'col') {
             sourceCards = columns[data.zoneIndex].slice(data.cardIndex);
@@ -202,13 +250,12 @@
         if (sourceCards.length === 0) return;
         let movingCard = sourceCards[0];
 
-        // --- SZIGORÚ SZABÁLYELLENŐRZÉS ---
         let targetCol = columns[targetColIndex];
         let canDrop = false;
         let movingRank = vals.indexOf(movingCard.v);
 
         if (targetCol.length === 0) {
-            if (movingRank === 12) canDrop = true; // Üres helyre csak Király
+            if (movingRank === 12) canDrop = true;
         } else {
             let topCard = targetCol[targetCol.length - 1];
             let movingIsRed = ['♥', '♦'].includes(movingCard.s);
@@ -216,22 +263,16 @@
             let topRank = vals.indexOf(topCard.v);
 
             if (movingIsRed !== topIsRed && movingRank === topRank - 1) {
-                canDrop = true; // Ellentétes szín és eggyel kisebb rang
+                canDrop = true;
             }
         }
 
-        if (!canDrop) {
-            alert("Szabálytalan lépés! Ide csak váltott színű és eggyel kisebb lap rakható.");
-            return;
-        }
+        if (!canDrop) return;
 
-        // Ha a szabályok stimmelnek, végrehajtjuk a mozgást az adatok szintjén
         saveState();
 
-        // Törlés a forrásból
         if (data.sourceZone === 'col') {
             columns[data.zoneIndex].splice(data.cardIndex);
-            // Ha maradt kártya az oszlopban, a legfelsőt felfordítjuk
             if (columns[data.zoneIndex].length > 0) {
                 columns[data.zoneIndex][columns[data.zoneIndex].length - 1].faceUp = true;
             }
@@ -241,7 +282,6 @@
             foundations[data.zoneIndex].pop();
         }
 
-        // Hozzáadás a célhoz
         columns[targetColIndex] = columns[targetColIndex].concat(sourceCards);
         render();
     }
@@ -252,11 +292,7 @@
         
         let movingCard = null;
         if (data.sourceZone === 'col') {
-            // Gyűjtőbe csak egyetlen lapot rakhatunk, az oszlop legutolsóját!
-            if (data.cardIndex !== columns[data.zoneIndex].length - 1) {
-                alert("Csoportos kártyasort nem rakhatsz a gyűjtőbe!");
-                return;
-            }
+            if (data.cardIndex !== columns[data.zoneIndex].length - 1) return;
             movingCard = columns[data.zoneIndex][data.cardIndex];
         } else if (data.sourceZone === 'waste') {
             movingCard = waste[waste.length - 1];
@@ -266,29 +302,24 @@
 
         if (!movingCard) return;
 
-        // --- ALAPOK SZIGORÚ SZABÁLYA ---
         let targetFnd = foundations[targetFndIndex];
         let canDrop = false;
         let movingRank = vals.indexOf(movingCard.v);
 
         if (targetFnd.length === 0) {
-            if (movingRank === 0) canDrop = true; // Csak Ász kezdhet alaphelyet
+            if (movingRank === 0) canDrop = true;
         } else {
             let topCard = targetFnd[targetFnd.length - 1];
             let topRank = vals.indexOf(topCard.v);
             if (movingCard.s === topCard.s && movingRank === topRank + 1) {
-                canDrop = true; // Azonos szín és növekvő sorrend
+                canDrop = true;
             }
         }
 
-        if (!canDrop) {
-            alert("A gyűjtőbe csak azonos színű és eggyel nagyobb lapot tehetsz, az alap az Ász!");
-            return;
-        }
+        if (!canDrop) return;
 
         saveState();
 
-        // Törlés a forrásból
         if (data.sourceZone === 'col') {
             columns[data.zoneIndex].pop();
             if (columns[data.zoneIndex].length > 0) {
@@ -300,15 +331,9 @@
             foundations[data.zoneIndex].pop();
         }
 
-        // Hozzáadás a gyűjtőhöz
         foundations[targetFndIndex].push(movingCard);
         render();
         checkWinCondition();
-    }
-
-    // Szuper-kompatibilitási réteg a régi HTML ondrop hívásodhoz a harmadik alapkeretnél
-    function handleFoundationDrop(e, slot) {
-        dropOnFoundation(e, 2);
     }
 
     function checkWinCondition() {
@@ -320,7 +345,6 @@
         }
     }
 
-    // ATOMBIZTOS UNDO: Lementi a teljes játékállapot mély másolatát JSON formátumban
     function saveState() {
         history.push(JSON.stringify({
             stock: stock,
@@ -338,8 +362,6 @@
             foundations = previousState.foundations;
             columns = previousState.columns;
             render();
-        } else {
-            console.log("Nincs több visszavonható lépés.");
         }
     }
 
