@@ -2,7 +2,7 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <title>Nefi Solitaire - Profi Motor</title>
+    <title>Nefi Solitaire - Szuper-Profi Motor</title>
     <style>
         body { background: #0b3d0b; color: white; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; align-items: center; }
         #top { display: flex; gap: 15px; margin-top: 20px; }
@@ -149,7 +149,6 @@
                 }));
             };
 
-            // Dupla kattintás bárilyen kártyára (oszlopok teteje)
             el.ondblclick = e => {
                 e.stopPropagation();
                 tryAutoMoveToFoundation(sourceZone, zoneIndex, cardIndex);
@@ -158,7 +157,6 @@
         return el;
     }
 
-    // Dobott lap dupla kattintásos kezelése
     function tryAutoMoveWaste() {
         if (waste.length === 0) return;
         let movingCard = waste[waste.length - 1];
@@ -221,11 +219,10 @@
         return true;
     }
 
-    // Automata végjáték gomb: ha minden lefelé néző lap már fent van, egy gombnyomással pakolja fel a maradékot!
     function autoFinish() {
         let hiddenCardsExist = columns.some(col => col.some(c => !c.faceUp));
         if (hiddenCardsExist) {
-            alert("Még vannek rejtett lapok a táblán! Fordítsd fel őket előbb.");
+            alert("Még vannak rejtett lapok a táblán! Fordítsd fel őket előbb.");
             return;
         }
 
@@ -236,7 +233,6 @@
             moved = false;
             loops++;
 
-            // Dobott lap tesztelése
             if (waste.length > 0) {
                 if (tryMoveCardToAnyFoundation(waste[waste.length - 1], 'waste', 0)) {
                     moved = true;
@@ -244,7 +240,6 @@
                 }
             }
 
-            // Oszlopok tetejének tesztelése
             for (let i = 0; i < 7; i++) {
                 if (columns[i].length > 0) {
                     let topCard = columns[i][columns[i].length - 1];
