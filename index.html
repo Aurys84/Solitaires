@@ -2,12 +2,12 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <title>Nefi Solitaire - Biztos Gombos</title>
+    <title>Nefi Solitaire</title>
     <style>
         body { background: #0b3d0b; color: white; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; align-items: center; }
-        #top { display: flex; gap: 15px; margin-top: 20px; align-items: center; }
+        #top { display: flex; gap: 15px; margin-top: 20px; }
         #table { display: flex; gap: 10px; margin-top: 20px; }
-        .slot { width: 70px; height: 100px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 5px; display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer; }
+        .slot { width: 70px; height: 100px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 5px; display: flex; align-items: center; justify-content: center; position: relative; }
         .column { width: 80px; position: relative; min-height: 400px; }
         
         .card { 
@@ -24,24 +24,21 @@
         .back { background: #2196F3 !important; border: 3px solid white; color: transparent !important; }
         .back * { display: none; }
         .red { color: red; }
-        .btn-action { padding: 8px 12px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
     <div id="top">
         <div class="slot" id="stock" onclick="handleStockClick()">PAKLI</div>
         <div class="slot" id="waste"></div>
-        <button class="btn-action" onclick="tryAutoMoveWaste()">⬆️ PAKLIBÓL FENTRE</button>
         <div class="slot" id="fnd-0" ondragover="event.preventDefault()" ondrop="dropOnFoundation(event, 0)"></div>
         <div class="slot" id="fnd-1" ondragover="event.preventDefault()" ondrop="dropOnFoundation(event, 1)"></div>
         <div class="slot" id="fnd-2" ondragover="event.preventDefault()" ondrop="dropOnFoundation(event, 2)"></div>
         <div class="slot" id="fnd-3" ondragover="event.preventDefault()" ondrop="dropOnFoundation(event, 3)"></div>
     </div>
     <div id="table"></div>
-    <div style="margin-top:20px; display: flex; gap: 10px;">
-        <button class="btn-action" onclick="init()">ÚJ LEOSZTÁS</button>
-        <button class="btn-action" onclick="undo()">VISSZA</button>
-        <button class="btn-action" onclick="autoFinish()">🤖 AUTOMATA KIRAKÁS</button>
+    <div style="margin-top:20px;">
+        <button onclick="init()">ÚJ LEOSZTÁS</button>
+        <button onclick="undo()">VISSZA</button>
     </div>
 <script>
     let stock = [];
@@ -150,105 +147,8 @@
                     cardIndex: cardIndex
                 }));
             };
-
-            // Oszlopok lapjain marad a dupla kattintás, az eddig is jó volt
-            if (sourceZone === 'col') {
-                el.ondblclick = e => {
-                    e.stopPropagation();
-                    tryAutoMoveToFoundation(zoneIndex, cardIndex);
-                };
-            }
         }
         return el;
-    }
-
-    function tryAutoMoveWaste() {
-        if (waste.length === 0) return;
-        let movingCard = waste[waste.length - 1];
-        if (tryMoveCardToAnyFoundation(movingCard, 'waste', 0)) {
-            render();
-            checkWinCondition();
-        }
-    }
-
-    function tryAutoMoveToFoundation(zoneIndex, cardIndex) {
-        if (cardIndex !== columns[zoneIndex].length - 1) return;
-        let movingCard = columns[zoneIndex][cardIndex];
-        if (!movingCard) return;
-
-        if (tryMoveCardToAnyFoundation(movingCard, 'col', zoneIndex)) {
-            render();
-            checkWinCondition();
-        }
-    }
-
-    function tryMoveCardToAnyFoundation(movingCard, sourceZone, zoneIndex) {
-        let targetFndIndex = -1;
-        let movingRank = vals.indexOf(movingCard.v);
-
-        for (let i = 0; i < 4; i++) {
-            let fnd = foundations[i];
-            if (fnd.length === 0) {
-                if (movingRank === 0) { targetFndIndex = i; break; }
-            } else {
-                let topCard = fnd[fnd.length - 1];
-                let topRank = vals.indexOf(topCard.v);
-                if (movingCard.s === topCard.s && movingRank === topRank + 1) {
-                    targetFndIndex = i; break;
-                }
-            }
-        }
-
-        if (targetFndIndex === -1) return false;
-
-        saveState();
-
-        if (sourceZone === 'col') {
-            columns[zoneIndex].pop();
-            if (columns[zoneIndex].length > 0) {
-                columns[zoneIndex][columns[zoneIndex].length - 1].faceUp = true;
-            }
-        } else if (sourceZone === 'waste') {
-            waste.pop();
-        }
-
-        foundations[targetFndIndex].push(movingCard);
-        return true;
-    }
-
-    function autoFinish() {
-        let hiddenCardsExist = columns.some(col => col.some(c => !c.faceUp));
-        if (hiddenCardsExist) {
-            alert("Még vannak rejtett lapok a táblán! Fordítsd fel őket előbb.");
-            return;
-        }
-
-        saveState();
-        let moved = true;
-        let loops = 0;
-        while (moved && loops < 100) {
-            moved = false;
-            loops++;
-
-            if (waste.length > 0) {
-                if (tryMoveCardToAnyFoundation(waste[waste.length - 1], 'waste', 0)) {
-                    moved = true;
-                    continue;
-                }
-            }
-
-            for (let i = 0; i < 7; i++) {
-                if (columns[i].length > 0) {
-                    let topCard = columns[i][columns[i].length - 1];
-                    if (tryMoveCardToAnyFoundation(topCard, 'col', i)) {
-                        moved = true;
-                        break;
-                    }
-                }
-            }
-        }
-        render();
-        checkWinCondition();
     }
 
     function handleStockClick() {
@@ -373,10 +273,10 @@
     }
 
     function checkWinCondition() {
-        `$total` = foundations.reduce((sum, fnd) => sum + fnd.length, 0);
+        let total = foundations.reduce((sum, fnd) => sum + fnd.length, 0);
         if (total === 52) {
             setTimeout(() => {
-                alert("GRATULÁLOK, NYERTÉL! 🎉 Minden kártyát sikeresen elrendeztél a Mátrixban!");
+                alert("GRATULÁLOK, NYERTÉL! 🎉");
             }, 300);
         }
     }
