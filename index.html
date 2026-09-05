@@ -2,10 +2,10 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <title>Nefi Solitaire - Fix Dupla Katt</title>
+    <title>Nefi Solitaire - Biztos Gombos</title>
     <style>
         body { background: #0b3d0b; color: white; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; align-items: center; }
-        #top { display: flex; gap: 15px; margin-top: 20px; }
+        #top { display: flex; gap: 15px; margin-top: 20px; align-items: center; }
         #table { display: flex; gap: 10px; margin-top: 20px; }
         .slot { width: 70px; height: 100px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 5px; display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer; }
         .column { width: 80px; position: relative; min-height: 400px; }
@@ -24,22 +24,24 @@
         .back { background: #2196F3 !important; border: 3px solid white; color: transparent !important; }
         .back * { display: none; }
         .red { color: red; }
+        .btn-action { padding: 8px 12px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
     <div id="top">
         <div class="slot" id="stock" onclick="handleStockClick()">PAKLI</div>
-        <div class="slot" id="waste" ondblclick="tryAutoMoveWaste()"></div>
+        <div class="slot" id="waste"></div>
+        <button class="btn-action" onclick="tryAutoMoveWaste()">⬆️ PAKLIBÓL FENTRE</button>
         <div class="slot" id="fnd-0" ondragover="event.preventDefault()" ondrop="dropOnFoundation(event, 0)"></div>
         <div class="slot" id="fnd-1" ondragover="event.preventDefault()" ondrop="dropOnFoundation(event, 1)"></div>
         <div class="slot" id="fnd-2" ondragover="event.preventDefault()" ondrop="dropOnFoundation(event, 2)"></div>
         <div class="slot" id="fnd-3" ondragover="event.preventDefault()" ondrop="dropOnFoundation(event, 3)"></div>
     </div>
     <div id="table"></div>
-    <div style="margin-top:20px;">
-        <button onclick="init()">ÚJ LEOSZTÁS</button>
-        <button onclick="undo()">VISSZA</button>
-        <button onclick="autoFinish()">🤖 AUTOMATA KIRAKÁS</button>
+    <div style="margin-top:20px; display: flex; gap: 10px;">
+        <button class="btn-action" onclick="init()">ÚJ LEOSZTÁS</button>
+        <button class="btn-action" onclick="undo()">VISSZA</button>
+        <button class="btn-action" onclick="autoFinish()">🤖 AUTOMATA KIRAKÁS</button>
     </div>
 <script>
     let stock = [];
@@ -149,15 +151,13 @@
                 }));
             };
 
-            // Dupla kattintás kezelése bárhol (oszlop vagy dobott lap)
-            el.ondblclick = e => {
-                e.stopPropagation();
-                if (sourceZone === 'col') {
+            // Oszlopok lapjain marad a dupla kattintás, az eddig is jó volt
+            if (sourceZone === 'col') {
+                el.ondblclick = e => {
+                    e.stopPropagation();
                     tryAutoMoveToFoundation(zoneIndex, cardIndex);
-                } else if (sourceZone === 'waste') {
-                    tryAutoMoveWaste();
-                }
-            };
+                };
+            }
         }
         return el;
     }
@@ -373,7 +373,7 @@
     }
 
     function checkWinCondition() {
-        let total = foundations.reduce((sum, fnd) => sum + fnd.length, 0);
+        `$total` = foundations.reduce((sum, fnd) => sum + fnd.length, 0);
         if (total === 52) {
             setTimeout(() => {
                 alert("GRATULÁLOK, NYERTÉL! 🎉 Minden kártyát sikeresen elrendeztél a Mátrixban!");
