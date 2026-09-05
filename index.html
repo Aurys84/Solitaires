@@ -2,7 +2,7 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <title>Nefi Solitaire - Jobbkezes Pakli</title>
+    <title>Nefi Solitaire - Jobbkezes Profi</title>
     <style>
         body { background: #0b3d0b; color: white; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; align-items: center; }
         #top { display: flex; gap: 15px; margin-top: 20px; }
@@ -256,7 +256,7 @@
 
     function handleStockClick() {
         saveState();
-5        if (stock.length > 0) {
+        if (stock.length > 0) {
             let card = stock.pop();
             card.faceUp = true;
             waste.push(card);
