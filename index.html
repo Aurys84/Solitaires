@@ -2,7 +2,7 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <title>Nefi Solitaire</title>
+    <title>Nefi Solitaire - Profi Végleges</title>
     <style>
         body { background: #0b3d0b; color: white; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; align-items: center; }
         #top { display: flex; gap: 15px; margin-top: 20px; }
@@ -39,6 +39,7 @@
     <div style="margin-top:20px;">
         <button onclick="init()">ÚJ LEOSZTÁS</button>
         <button onclick="undo()">VISSZA</button>
+        <button onclick="autoFinish()">🤖 AUTOMATA KIRAKÁS</button>
     </div>
 <script>
     let stock = [];
@@ -147,8 +148,99 @@
                     cardIndex: cardIndex
                 }));
             };
+
+            // Dupla kattintás az oszlopok tetején lévő lapokra
+            if (sourceZone === 'col') {
+                el.ondblclick = e => {
+                    e.stopPropagation();
+                    tryAutoMoveToFoundation(zoneIndex, cardIndex);
+                };
+            }
         }
         return el;
+    }
+
+    function tryAutoMoveToFoundation(zoneIndex, cardIndex) {
+        if (cardIndex !== columns[zoneIndex].length - 1) return;
+        let movingCard = columns[zoneIndex][cardIndex];
+        if (!movingCard) return;
+
+        let targetFndIndex = -1;
+        let movingRank = vals.indexOf(movingCard.v);
+
+        for (let i = 0; i < 4; i++) {
+            let fnd = foundations[i];
+            if (fnd.length === 0) {
+                if (movingRank === 0) { targetFndIndex = i; break; }
+            } else {
+                let topCard = fnd[fnd.length - 1];
+                let topRank = vals.indexOf(topCard.v);
+                if (movingCard.s === topCard.s && movingRank === topRank + 1) {
+                    targetFndIndex = i; break;
+                }
+            }
+        }
+
+        if (targetFndIndex === -1) return;
+
+        saveState();
+        columns[zoneIndex].pop();
+        if (columns[zoneIndex].length > 0) {
+            columns[zoneIndex][columns[zoneIndex].length - 1].faceUp = true;
+        }
+        foundations[targetFndIndex].push(movingCard);
+        render();
+        checkWinCondition();
+    }
+
+    function autoFinish() {
+        let hiddenCardsExist = columns.some(col => col.some(c => !c.faceUp));
+        if (hiddenCardsExist) {
+            alert("Még vannak rejtett lapok a táblán! Fordítsd fel őket előbb.");
+            return;
+        }
+
+        saveState();
+        let moved = true;
+        let loops = 0;
+        while (moved && loops < 100) {
+            moved = false;
+            loops++;
+
+            if (waste.length > 0) {
+                let movingCard = waste[waste.length - 1];
+                let movingRank = vals.indexOf(movingCard.v);
+                for (let i = 0; i < 4; i++) {
+                    let fnd = foundations[i];
+                    if ((fnd.length === 0 && movingRank === 0) || (fnd.length > 0 && fnd[fnd.length - 1].s === movingCard.s && movingRank === vals.indexOf(fnd[fnd.length - 1].v) + 1)) {
+                        foundations[i].push(waste.pop());
+                        moved = true;
+                        break;
+                    }
+                }
+                if (moved) continue;
+            }
+
+            for (let cIdx = 0; cIdx < 7; cIdx++) {
+                if (columns[cIdx].length > 0) {
+                    let movingCard = columns[cIdx][columns[cIdx].length - 1];
+                    let movingRank = vals.indexOf(movingCard.v);
+                    for (let i = 0; i < 4; i++) {
+                        let fnd = foundations[i];
+                        if ((fnd.length === 0 && movingRank === 0) || (fnd.length > 0 && fnd[fnd.length - 1].s === movingCard.s && movingRank === vals.indexOf(fnd[fnd.length - 1].v) + 1)) {
+                            columns[cIdx].pop();
+                            if (columns[cIdx].length > 0) columns[cIdx][columns[cIdx].length - 1].faceUp = true;
+                            foundations[i].push(movingCard);
+                            moved = true;
+                            break;
+                        }
+                    }
+                    if (moved) break;
+                }
+            }
+        }
+        render();
+        checkWinCondition();
     }
 
     function handleStockClick() {
