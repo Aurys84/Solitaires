@@ -2,12 +2,12 @@
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <title>Nefi Solitaire - Profi Végleges</title>
+    <title>Nefi Solitaire - Profi Motor</title>
     <style>
         body { background: #0b3d0b; color: white; font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; align-items: center; }
         #top { display: flex; gap: 15px; margin-top: 20px; }
         #table { display: flex; gap: 10px; margin-top: 20px; }
-        .slot { width: 70px; height: 100px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 5px; display: flex; align-items: center; justify-content: center; position: relative; }
+        .slot { width: 70px; height: 100px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 5px; display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer; }
         .column { width: 80px; position: relative; min-height: 400px; }
         
         .card { 
@@ -29,7 +29,7 @@
 <body>
     <div id="top">
         <div class="slot" id="stock" onclick="handleStockClick()">PAKLI</div>
-        <div class="slot" id="waste"></div>
+        <div class="slot" id="waste" ondblclick="tryAutoMoveWaste()"></div>
         <div class="slot" id="fnd-0" ondragover="event.preventDefault()" ondrop="dropOnFoundation(event, 0)"></div>
         <div class="slot" id="fnd-1" ondragover="event.preventDefault()" ondrop="dropOnFoundation(event, 1)"></div>
         <div class="slot" id="fnd-2" ondragover="event.preventDefault()" ondrop="dropOnFoundation(event, 2)"></div>
@@ -149,22 +149,45 @@
                 }));
             };
 
-            // Dupla kattintás az oszlopok tetején lévő lapokra
-            if (sourceZone === 'col') {
-                el.ondblclick = e => {
-                    e.stopPropagation();
-                    tryAutoMoveToFoundation(zoneIndex, cardIndex);
-                };
-            }
+            // Dupla kattintás bárilyen kártyára (oszlopok teteje)
+            el.ondblclick = e => {
+                e.stopPropagation();
+                tryAutoMoveToFoundation(sourceZone, zoneIndex, cardIndex);
+            };
         }
         return el;
     }
 
-    function tryAutoMoveToFoundation(zoneIndex, cardIndex) {
-        if (cardIndex !== columns[zoneIndex].length - 1) return;
-        let movingCard = columns[zoneIndex][cardIndex];
+    // Dobott lap dupla kattintásos kezelése
+    function tryAutoMoveWaste() {
+        if (waste.length === 0) return;
+        let movingCard = waste[waste.length - 1];
+        if (tryMoveCardToAnyFoundation(movingCard, 'waste', 0)) {
+            render();
+            checkWinCondition();
+        }
+    }
+
+    function tryAutoMoveToFoundation(sourceZone, zoneIndex, cardIndex) {
+        let movingCard = null;
+        if (sourceZone === 'col') {
+            if (cardIndex !== columns[zoneIndex].length - 1) return;
+            movingCard = columns[zoneIndex][cardIndex];
+        } else if (sourceZone === 'waste') {
+            movingCard = waste[waste.length - 1];
+        } else {
+            return;
+        }
+
         if (!movingCard) return;
 
+        if (tryMoveCardToAnyFoundation(movingCard, sourceZone, zoneIndex)) {
+            render();
+            checkWinCondition();
+        }
+    }
+
+    function tryMoveCardToAnyFoundation(movingCard, sourceZone, zoneIndex) {
         let targetFndIndex = -1;
         let movingRank = vals.indexOf(movingCard.v);
 
@@ -181,22 +204,28 @@
             }
         }
 
-        if (targetFndIndex === -1) return;
+        if (targetFndIndex === -1) return false;
 
         saveState();
-        columns[zoneIndex].pop();
-        if (columns[zoneIndex].length > 0) {
-            columns[zoneIndex][columns[zoneIndex].length - 1].faceUp = true;
+
+        if (sourceZone === 'col') {
+            columns[zoneIndex].pop();
+            if (columns[zoneIndex].length > 0) {
+                columns[zoneIndex][columns[zoneIndex].length - 1].faceUp = true;
+            }
+        } else if (sourceZone === 'waste') {
+            waste.pop();
         }
+
         foundations[targetFndIndex].push(movingCard);
-        render();
-        checkWinCondition();
+        return true;
     }
 
+    // Automata végjáték gomb: ha minden lefelé néző lap már fent van, egy gombnyomással pakolja fel a maradékot!
     function autoFinish() {
         let hiddenCardsExist = columns.some(col => col.some(c => !c.faceUp));
         if (hiddenCardsExist) {
-            alert("Még vannak rejtett lapok a táblán! Fordítsd fel őket előbb.");
+            alert("Még vannek rejtett lapok a táblán! Fordítsd fel őket előbb.");
             return;
         }
 
@@ -207,35 +236,22 @@
             moved = false;
             loops++;
 
+            // Dobott lap tesztelése
             if (waste.length > 0) {
-                let movingCard = waste[waste.length - 1];
-                let movingRank = vals.indexOf(movingCard.v);
-                for (let i = 0; i < 4; i++) {
-                    let fnd = foundations[i];
-                    if ((fnd.length === 0 && movingRank === 0) || (fnd.length > 0 && fnd[fnd.length - 1].s === movingCard.s && movingRank === vals.indexOf(fnd[fnd.length - 1].v) + 1)) {
-                        foundations[i].push(waste.pop());
+                if (tryMoveCardToAnyFoundation(waste[waste.length - 1], 'waste', 0)) {
+                    moved = true;
+                    continue;
+                }
+            }
+
+            // Oszlopok tetejének tesztelése
+            for (let i = 0; i < 7; i++) {
+                if (columns[i].length > 0) {
+                    let topCard = columns[i][columns[i].length - 1];
+                    if (tryMoveCardToAnyFoundation(topCard, 'col', i)) {
                         moved = true;
                         break;
                     }
-                }
-                if (moved) continue;
-            }
-
-            for (let cIdx = 0; cIdx < 7; cIdx++) {
-                if (columns[cIdx].length > 0) {
-                    let movingCard = columns[cIdx][columns[cIdx].length - 1];
-                    let movingRank = vals.indexOf(movingCard.v);
-                    for (let i = 0; i < 4; i++) {
-                        let fnd = foundations[i];
-                        if ((fnd.length === 0 && movingRank === 0) || (fnd.length > 0 && fnd[fnd.length - 1].s === movingCard.s && movingRank === vals.indexOf(fnd[fnd.length - 1].v) + 1)) {
-                            columns[cIdx].pop();
-                            if (columns[cIdx].length > 0) columns[cIdx][columns[cIdx].length - 1].faceUp = true;
-                            foundations[i].push(movingCard);
-                            moved = true;
-                            break;
-                        }
-                    }
-                    if (moved) break;
                 }
             }
         }
@@ -368,7 +384,7 @@
         let total = foundations.reduce((sum, fnd) => sum + fnd.length, 0);
         if (total === 52) {
             setTimeout(() => {
-                alert("GRATULÁLOK, NYERTÉL! 🎉");
+                alert("GRATULÁLOK, NYERTÉL! 🎉 Minden kártyát sikeresen elrendeztél a Mátrixban!");
             }, 300);
         }
     }
@@ -397,3 +413,5 @@
 </script>
 </body>
 </html>
+
+
